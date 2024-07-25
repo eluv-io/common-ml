@@ -18,3 +18,16 @@ class VideoTag:
     end_time: int
     text: str
     confidence: Optional[float]=None
+
+@dataclass
+class _box:
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+@dataclass
+class FrameTag:
+    text: str
+    box: _box
+    confidence: Optional[float]=None
