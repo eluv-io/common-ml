@@ -3,7 +3,7 @@
 #
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 @dataclass
 class VideoTag:
@@ -20,14 +20,7 @@ class VideoTag:
     confidence: Optional[float]=None
 
 @dataclass
-class _box:
-    x1: float
-    y1: float
-    x2: float
-    y2: float
-
-@dataclass
 class FrameTag:
     text: str
-    box: _box
+    box: Tuple[float, float, float, float]
     confidence: Optional[float]=None
