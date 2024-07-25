@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, IO, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any
 
 from tags import VideoTag, FrameTag
 
@@ -10,5 +10,5 @@ class VideoModel(ABC):
 
 class VideoFrameModel(ABC):
     @abstractmethod
-    def tag_frame(self, video: Any) -> Tuple[List[VideoTag], Dict[int, List[FrameTag]]]:
+    def tag(self, video: Any) -> Tuple[List[VideoTag], Dict[int, List[FrameTag]]]:
         pass
