@@ -7,6 +7,12 @@ import tempfile
 import subprocess
 from loguru import logger
 
+def get_fps(video_path):
+    video = cv2.VideoCapture(video_path)
+    fps = video.get(cv2.CAP_PROP_FPS)
+    video.release()
+    return fps
+
 # Get video frames from a video path
 # 
 # Args:

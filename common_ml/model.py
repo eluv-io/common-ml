@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Dict, Any
 
-from tags import VideoTag, FrameTag
+from .tags import VideoTag, FrameTag
 
 class VideoModel(ABC):
     @abstractmethod
