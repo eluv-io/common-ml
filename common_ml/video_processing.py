@@ -1,5 +1,6 @@
 
 import numpy as np
+from typing import Tuple, List
 from fractions import Fraction
 import subprocess
 import json
@@ -28,7 +29,7 @@ def get_fps(video_file: str) -> float:
     return fps
 
 # input can be either downloadUrl or filename
-def get_key_frames(video_file: str):
+def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]:
     cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v", "-show_frames",
             "-show_entries", "frame=width,height,pict_type,pkt_pts_time",
             "-print_format", "json", video_file]
@@ -41,6 +42,7 @@ def get_key_frames(video_file: str):
     w, h = output["frames"][0]["width"], output["frames"][0]["height"]
 
     timestamps = [float(f["pkt_pts_time"]) for f in output["frames"] if f["pict_type"] == 'I']
+    f_pos = [i for i, f in enumerate(output["frames"]) if f["pict_type"] == 'I']
 
     cmd = ["ffmpeg", "-nostdin", "-i", video_file,
             "-vf", "select='eq(pict_type,I)'", "-vsync", "2",
@@ -56,4 +58,4 @@ def get_key_frames(video_file: str):
     frames = frames.reshape((-1, h, w, 3))
 
     assert len(timestamps) == frames.shape[0], "Key frames returned and key frames extracted from file metadata do not match"
-    return frames, timestamps
+    return frames, f_pos, timestamps
