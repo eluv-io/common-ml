@@ -58,4 +58,7 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
     frames = frames.reshape((-1, h, w, 3))
 
     assert len(timestamps) == frames.shape[0], "Key frames returned and key frames extracted from file metadata do not match"
+
+    sorted_frames = sorted(((frame, pos, ts) for frame, pos, ts in zip(frames, f_pos, timestamps)), key=lambda x: x[1])
+    frames, f_pos, timestamps = zip(*sorted_frames)
     return frames, f_pos, timestamps

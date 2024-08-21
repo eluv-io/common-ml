@@ -2,24 +2,34 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, Dict, Any
 
 from .tags import VideoTag, FrameTag
+from .video_processing import get_key_frames
 
 class VideoModel(ABC):
     @abstractmethod
     def tag(self, data: Any) -> List[VideoTag]:
         pass
 
-class VideoFrameModel(ABC):
+class FrameModel(ABC):
     @abstractmethod
-    def tag(self, video: Any) -> Tuple[List[VideoTag], Dict[int, List[FrameTag]]]:
+    def tag(self, img: Any) -> List[FrameTag]:
         pass
 
-    # Converts FrameTags to list of video tags by merging frame tags that occur in successive key frames
-    # Args:
-    #   frame_tags: map from frame idx to list of FrameTags
-    #   fps: frames per second of the video
-    #   allow_single_frame: if true, then tags that occur in just a single frame will be included, else they will be removed from the result
+    # default method for running frame model on a video file
+    def tag_video(self, video: str, allow_single_frame: bool, freq: int) -> Tuple[Dict[int, List[VideoTag]], List[VideoTag]]:
+        assert freq > 0, "Frequency must be a positive integer"
+        key_frames, fpos, ts = get_key_frames(video_file=video)
+        ftags = {pos: self.tag(frame) for i, (pos, frame) in enumerate(zip(fpos, key_frames)) if i % freq == 0}
+        ts = [t for i, t in enumerate(ts) if i % freq == 0]
+        video_tags = FrameModel._combine_adjacent(ftags, ts, allow_single_frame)
+        return ftags, video_tags
+    
     @staticmethod
-    def combine_adjacent(frame_tags: Dict[int, List[FrameTag]], fps: float, allow_single_frame: bool) -> List[VideoTag]:
+    def _combine_adjacent(frame_tags: Dict[int, List[FrameTag]], timestamps: List[float], allow_single_frame: bool) -> List[VideoTag]:
+        f_idx = sorted(list(frame_tags.keys()))
+        f_idx_to_time = {f_idx: t for f_idx, t in zip(f_idx, timestamps)}
+        
+        _approx_fps = (f_idx[-1] - f_idx[0]) / (timestamps[-1] - timestamps[0])
+        f_intv = 1 / _approx_fps
         # maps a tag text value to frames where this tag occurs
         tag_to_frames = {} 
         for f_idx, tags in frame_tags.items():
@@ -58,11 +68,12 @@ class VideoFrameModel(ABC):
                 if allow_single_frame or right > left:
                     result.append(VideoTag(
                         text=tag,
-                        start_time=_to_milliseconds(left/fps),
-                        end_time=_to_milliseconds((right+1)/fps),
+                        start_time=FrameModel._to_milliseconds(f_idx_to_time[left]),
+                        end_time=FrameModel._to_milliseconds(f_idx_to_time[right]+f_intv),
                     ))
             
         return result
     
-def _to_milliseconds(seconds: float) -> int:
-    return round(seconds * 1000)
+    @staticmethod
+    def _to_milliseconds(seconds: float) -> int:
+        return round(seconds * 1000)

@@ -11,5 +11,6 @@ setup(
         'schema',
         'PyYAML',
         'marshmallow',
+        'quick_test_py @ git+https://github.com/elv-nickB/quick_test_py.git#egg=quick_test_py'
     ]
 )
