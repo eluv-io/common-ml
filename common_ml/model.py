@@ -15,7 +15,7 @@ class FrameModel(ABC):
         pass
 
     # default method for running frame model on a video file
-    def tag_video(self, video: str, allow_single_frame: bool, freq: int) -> Tuple[Dict[int, List[VideoTag]], List[VideoTag]]:
+    def tag_video(self, video: str, allow_single_frame: bool, freq: int) -> Tuple[Dict[int, List[FrameTag]], List[VideoTag]]:
         assert freq > 0, "Frequency must be a positive integer"
         key_frames, fpos, ts = get_key_frames(video_file=video)
         ftags = {pos: self.tag(frame) for i, (pos, frame) in enumerate(zip(fpos, key_frames)) if i % freq == 0}
