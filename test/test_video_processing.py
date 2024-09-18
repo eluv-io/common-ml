@@ -24,14 +24,11 @@ def main():
         raise ValueError("Cannot record and log at the same time")
     if args.record:
         tester.record()
-    elif args.log:
-        tester.log()
     else:
         tester.validate()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--record', action='store_true')
-    parser.add_argument('--log', action='store_true')
     args = parser.parse_args()
     main()
