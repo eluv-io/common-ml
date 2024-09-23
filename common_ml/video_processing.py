@@ -37,6 +37,8 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise Exception(e.output.decode("utf-8"))
+    except FileNotFoundError as e:
+        raise FileNotFoundError("ffprobe not found in PATH. Make sure ffmpeg is installed.")
     
     output = json.loads(output)
     w, h = output["frames"][0]["width"], output["frames"][0]["height"]
