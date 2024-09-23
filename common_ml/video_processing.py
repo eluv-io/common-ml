@@ -31,7 +31,7 @@ def get_fps(video_file: str) -> float:
 # input can be either downloadUrl or filename
 def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]:
     cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v", "-show_frames",
-            "-show_entries", "frame=width,height,pict_type,pkt_pts_time",
+            "-show_entries", "frame=width,height,pict_type,pkt_pts_time,pts_time",
             "-print_format", "json", video_file]
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
@@ -41,9 +41,13 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
         raise FileNotFoundError("ffprobe not found in PATH. Make sure ffmpeg is installed.")
     
     output = json.loads(output)
+    if "frames" not in output or len(output["frames"]) == 0:
+        raise Exception(f"No frames found in {video_file}")
     w, h = output["frames"][0]["width"], output["frames"][0]["height"]
+    # some versions do not specify pkt_pts_time, use pts_time in that case
+    timestamp_key = "pkt_pts_time" if "pkt_pts_time" in output["frames"][0] else "pts_time"
 
-    timestamps = [float(f["pkt_pts_time"]) for f in output["frames"] if f["pict_type"] == 'I']
+    timestamps = [float(f[timestamp_key]) for f in output["frames"] if f["pict_type"] == 'I']
     f_pos = [i for i, f in enumerate(output["frames"]) if f["pict_type"] == 'I']
 
     cmd = ["ffmpeg", "-nostdin", "-i", video_file,
