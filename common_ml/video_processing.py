@@ -4,6 +4,7 @@ from typing import Tuple, List
 from fractions import Fraction
 import subprocess
 import json
+import os
 from loguru import logger
 
 def get_fps(video_file: str) -> float:
@@ -68,3 +69,19 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
     sorted_frames = sorted(((frame, pos, ts) for frame, pos, ts in zip(frames, f_pos, timestamps)), key=lambda x: x[1])
     frames, f_pos, timestamps = zip(*sorted_frames)
     return frames, f_pos, timestamps
+
+def unfrag_video(video_file: str, output_file: str):
+    cmd = f"ffmpeg -y -i {video_file} -c copy {output_file}"
+    out, err = _run_command(cmd)
+    file_size = os.path.getsize(output_file) / 1024**2
+    if file_size < 0.01:
+        raise RuntimeError(f"Failed to unfrag video file {video_file}:\n file size={file_size}MiB\n cmd={cmd},\n stdout={out}\n stderr={err}") 
+
+# Run a command and return it's stdout
+# Throws error if command fails
+def _run_command(cmd: str) -> Tuple[str, str]:
+    logger.debug(f"Running command\n{cmd}\n")
+    res = subprocess.run(cmd.split(), capture_output=True, text=True)
+    if res.returncode != 0:
+        raise RuntimeError(f"Failed to run command\n{cmd}\nstderr=...\n{res.stderr}\nstdout=...\n {res.stdout}")
+    return res.stdout, res.stderr
