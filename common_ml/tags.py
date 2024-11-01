@@ -3,7 +3,7 @@
 #
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List
 
 @dataclass
 class VideoTag:
@@ -24,3 +24,10 @@ class FrameTag:
     text: str
     box: Tuple[float, float, float, float]
     confidence: Optional[float]=None
+
+
+@dataclass
+class AggTag:
+    start_time: int
+    end_time: int
+    tags: Dict[str, List[VideoTag]]
