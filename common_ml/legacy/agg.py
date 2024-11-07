@@ -13,7 +13,7 @@ def aggregate(intervals: List[Tuple[int, int]], label_to_tags: Dict[str, List[Vi
         label_to_tags[label] = sorted(tags, key=lambda x: x.start_time)
 
     # merged tags into their appropriate intervals
-    result: List[AggTag] = []
+    result = []
     for left, right in intervals:
         agg_tags = AggTagSchema().unmarshal({"start_time": left, "end_time": right, "tags": {}})
         for label, tags in label_to_tags.items():
@@ -25,14 +25,10 @@ def aggregate(intervals: List[Tuple[int, int]], label_to_tags: Dict[str, List[Vi
                     agg_tags.tags[label].append(tag)    
         result.append(agg_tags)
 
-    # coalesce tags if necessary
-    # TODO: right now, the coalesce option is specified in the tag itself (i.e. the tag has a "coalesce" field). We should probably specify this in the config file instead.
-    # TODO: we are only coalescing ASR tags, we need ot make this more general and specify a different coalesce option depending on the service. Many services likely won't need coalescing. 
     for i in range(len(result)): 
         agg_tag = result[i]
-        for feature, feat_tags in agg_tag.tags.items():
-            if len(feat_tags) > 0 and _do_coalesce(feat_tags[0]):
-                agg_tag.tags[feature] = _coalesce(feat_tags)
+        if "speech_to_text" in agg_tag.tags:
+            agg_tag.tags["speech_to_text"] = _coalesce(agg_tag.tags["speech_to_text"])
     
     return result
 
