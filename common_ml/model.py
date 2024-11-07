@@ -25,7 +25,7 @@ class FrameModel(ABC):
     
     @staticmethod
     def _combine_adjacent(frame_tags: Dict[int, List[FrameTag]], timestamps: List[float], allow_single_frame: bool) -> List[VideoTag]:
-        if len(frame_tags) < 2:
+        if len(frame_tags) == 0:
             return []
 
         f_idx = sorted(list(frame_tags.keys()))
