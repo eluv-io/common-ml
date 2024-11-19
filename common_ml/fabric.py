@@ -1,10 +1,10 @@
 from elv_client_py import ElvClient
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from collections import defaultdict
 from requests.exceptions import HTTPError
 from loguru import logger
 
-def get_tags(qhot: str, client: ElvClient, start_time: int, end_time: int, padding: int, include_tracks: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+def get_tags(qhot: str, client: ElvClient, start_time: int, end_time: int, padding: int, include_tracks: Optional[List[str]]=None) -> Dict[str, List[Dict[str, Any]]]:
     qhash = _resolve_hash(client, qhot)
     try:
         tag_files = client.content_object_metadata(
@@ -45,7 +45,7 @@ def get_tags(qhot: str, client: ElvClient, start_time: int, end_time: int, paddi
             if _does_overlap(tag["start_time"], tag['end_time'], ref_times=ref_times):
                 tag_fields = tag["text"]
                 for track, track_data in tag_fields.items():
-                    if track not in include_tracks:
+                    if include_tracks is not None and track not in include_tracks:
                         continue
                     for td in track_data:
                         # is the tag within the requested time range
