@@ -1,4 +1,4 @@
-from elv_client_python import ElvClient
+from elv_client_py import ElvClient
 from typing import List, Dict, Any
 from collections import defaultdict
 from requests.exceptions import HTTPError
