@@ -10,8 +10,8 @@ class Data(ABC):
     The `from_dict` method is a class method that should be implemented by subclasses, it should take a dictionary and return an instance of the class 
     while raising an exception if the dictionary is not valid.
     """
-    @abstractmethod
     @staticmethod
+    @abstractmethod
     def from_dict(data: dict) -> 'Data':
         pass
 
