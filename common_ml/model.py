@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, Dict, Any
 
 from .tags import VideoTag, FrameTag
-from .video_processing import get_key_frames
+from .video_processing import get_frames
 
 class VideoModel(ABC):
     @abstractmethod
@@ -15,11 +15,10 @@ class FrameModel(ABC):
         pass
 
     # default method for running frame model on a video file
-    def tag_video(self, video: str, allow_single_frame: bool, freq: int) -> Tuple[Dict[int, List[FrameTag]], List[VideoTag]]:
-        assert freq > 0, "Frequency must be a positive integer"
-        key_frames, fpos, ts = get_key_frames(video_file=video)
-        ftags = {pos: self.tag(frame) for i, (pos, frame) in enumerate(zip(fpos, key_frames)) if i % freq == 0}
-        ts = [t for i, t in enumerate(ts) if i % freq == 0]
+    def tag_video(self, video: str, allow_single_frame: bool, fps: int) -> Tuple[Dict[int, List[FrameTag]], List[VideoTag]]:
+        assert fps > 0, "Frequency must be a positive integer"
+        key_frames, fpos, ts = get_frames(video_file=video, fps=fps)
+        ftags = {pos: self.tag(frame) for pos, frame in zip(fpos, key_frames)}
         video_tags = FrameModel._combine_adjacent(ftags, ts, allow_single_frame)
         return ftags, video_tags
     
@@ -45,8 +44,8 @@ class FrameModel(ABC):
         # get id map: maps a key frame index to the next key frame index
         id_map = {}
         frame_indices = list(sorted(frame_tags.keys()))
-        for i in range(len(frame_indices)-1):
-            id_map[frame_indices[i]] = frame_indices[i+1]
+        for i in range(len(frame_indices)):
+            id_map[frame_indices[i]] = frame_indices[i+1] if i+1 < len(frame_indices) else frame_indices[i] # last frame points to itself
 
         result = []
 

@@ -73,7 +73,7 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
 
 # video_file: path to video file
 # fps: frames per second to sample
-def get_frames(video_file: str, fps: int) -> Tuple[np.ndarray, List[float]]:
+def get_frames(video_file: str, fps: int) -> Tuple[np.ndarray, List[int], List[float]]:
     cmd = f"ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 {video_file}"
     try:
         output = subprocess.check_output(cmd.split(' '), stderr=subprocess.STDOUT)
@@ -92,12 +92,12 @@ def get_frames(video_file: str, fps: int) -> Tuple[np.ndarray, List[float]]:
     # get frames 
     cmd = [
         "ffmpeg",
-        "-i", video_file,        # Input file
-        "-vf", f"fps={fps}, showinfo",           # Extract frames at 2 FPS
-        "-f", "image2pipe",       # Use image pipe format
+        "-i", video_file,        
+        "-vf", f"fps={fps}, showinfo",        
+        "-f", "image2pipe",       
          "-f", "rawvideo", 
-         "-pix_fmt", "rgb24",         # Output frames as PNG
-        "pipe:1"                  # Output to stdout
+         "-pix_fmt", "rgb24",        
+        "pipe:1"                
     ]
 
     process = subprocess.Popen(cmd, stderr=-1, stdout=-1)
@@ -106,13 +106,21 @@ def get_frames(video_file: str, fps: int) -> Tuple[np.ndarray, List[float]]:
     if retcode:
         raise Exception(f"ffmpeg error: {err.decode('utf-8')}")
     
-    timestamps = [re.search(r'pts_time:([^\s]+)', line) for line in err.decode().split('\n')]
-    timestamps = [float(ts.group(1)) for ts in timestamps if ts]
-
+    video_fps = get_fps(video_file)
+    
+    timestamps, frame_idx = [], []
+    stderr_output = err.decode("utf-8")
+    for line in stderr_output.splitlines():
+        if "showinfo" in line and "n:" in line:  # Lines containing frame info
+            ts = float(re.search(r"pts_time:([0-9.]+)", line).group(1))
+            fidx = video_fps * ts
+            timestamps.append(ts)
+            frame_idx.append(round(fidx))
+    
     frames = np.frombuffer(out, np.uint8)
     frames = frames.reshape((-1, h, w, 3))
 
-    return frames, timestamps
+    return frames, frame_idx, timestamps
 
 def unfrag_video(video_file: str, output_file: str):
     cmd = f"ffmpeg -y -i {video_file} -c copy {output_file}"

@@ -3,6 +3,7 @@ from typing import Any, List
 import random
 from quick_test_py import Tester
 import os
+from dataclasses import asdict
 
 from common_ml.model import FrameModel
 from common_ml.tags import FrameTag
@@ -20,10 +21,18 @@ class FakeFrameModel(FrameModel):
 def test_tag():
     random.seed(42)
     model = FakeFrameModel()
-    t1 = lambda: model.tag_video(test_file, False, 1)
-    t2 = lambda: model.tag_video(test_file, True, 1)
-    t3 = lambda: model.tag_video(test_file, False, 2)
-    t4 = lambda: model.tag_video(test_file, True, 2)
+    def t1():
+        ftags, vtags = model.tag_video(test_file, False, 1)
+        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
+    def t2():
+        ftags, vtags = model.tag_video(test_file, True, 1)
+        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
+    def t3():
+        ftags, vtags = model.tag_video(test_file, False, 2)
+        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
+    def t4():
+        ftags, vtags = model.tag_video(test_file, True, 2)
+        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
     return [t1, t2, t3, t4]
     
 def main():
