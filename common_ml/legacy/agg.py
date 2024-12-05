@@ -90,12 +90,14 @@ def _coalesce(tags: List[VideoTag]) -> List[VideoTag]:
     result = []
     curr_sentence = []
     for tag in tags:
+        if len(curr_sentence) == 0:
+            start_time = tag.start_time
         curr_sentence.append(tag.text)
         if tag.text[-1] in ['.', '?', '!']:
-            result.append(VideoTagSchema().unmarshal({"start_time": tags[0].start_time, "end_time": tag.end_time, "text": " ".join(curr_sentence)}))
+            result.append(VideoTagSchema().unmarshal({"start_time": start_time, "end_time": tag.end_time, "text": " ".join(curr_sentence)}))
             curr_sentence.clear()
     if len(curr_sentence) > 0:
-        result.append(VideoTagSchema().unmarshal({"start_time": tags[0].start_time, "end_time": tag.end_time, "text": " ".join(curr_sentence)}))
+        result.append(VideoTagSchema().unmarshal({"start_time": start_time, "end_time": tag.end_time, "text": " ".join(curr_sentence)}))
 
     return result
 

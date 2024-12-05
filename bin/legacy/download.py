@@ -34,6 +34,11 @@ def main():
         default=""
     )
     parser.add_argument(
+        "--contents",
+        type=str,
+        required=False
+    )
+    parser.add_argument(
         "--libid",
         type=str,
         help="library id",
@@ -48,7 +53,14 @@ def main():
         required=True,
     )
     args = parser.parse_args()
-    for qid in args.qids:
+    if args.qids and args.contents:
+        raise ValueError("Cannot specify both qids and contents")
+    if args.qids:
+        qids = args.qids
+    if args.contents:
+        with open(args.contents, 'r') as f:
+            qids = [line.strip() for line in f]
+    for qid in qids:
         download_tags(qid, args.libid, args.config, args.save_path, args.use_elv)
 
 if __name__ == "__main__":

@@ -124,18 +124,27 @@ def extract_tracks(tracks: Dict[str, object]) -> Dict[str, List[VideoTag]]:
     result = {}
     for key, track in tracks["metadata_tags"].items():
         label = track["label"]
-        if label in ["Shot Tags", "Sentence Tags"]:
+        if label in ["Shot Tags", "Sentence Tags", "STT Sentences"]:
             # skip aggregated tags
             continue
         track_name = label_to_track(label)
 
-        old_stt = label == "Speech to Text" and"wordpiece_timestamps" in track["tags"]
+        old_stt = label == "Speech to Text" and len(track["tags"]) > 0 and "wordpiece_timestamps" in track["tags"][0]
 
         if old_stt:
             formatted_tags = sum(([VideoTagSchema().unmarshal({"start_time": int(wp[1]), "end_time": int(wp[1])+1, "text": wp[0], "coalesce": True}) for wp in tags["wordpiece_timestamps"]] for tags in track["tags"]), [])
         else:
             # NOTE: sometimes tag text is stored as string instead of single element list. we should stick to one or the other. 
-            formatted_tags = [VideoTagSchema().unmarshal({"start_time": v["start_time"], "end_time": v["end_time"], "text": v["text"] if type(v["text"])==str else ' '.join(v["text"])}) for v in track["tags"]]
+            try:
+                formatted_tags = []
+                for v in track["tags"]:
+                    if "text" not in v or len(v["text"]) > 0 and v["text"][0] == None:
+                        formatted_tags.append(VideoTagSchema().unmarshal({"start_time": v["start_time"], "end_time": v["end_time"]}))
+                    else:
+                        formatted_tags.append(VideoTagSchema().unmarshal({"start_time": v["start_time"], "end_time": v["end_time"], "text": ' '.join(v["text"]) if type(v["text"])==list else v["text"]}))
+            except Exception as e:
+                print(1)
+                raise e
    
         result[track_name] = formatted_tags
     return result
