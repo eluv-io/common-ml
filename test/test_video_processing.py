@@ -2,7 +2,7 @@ import argparse
 import os
 from loguru import logger
 from quick_test_py import Tester
-from common_ml.video_processing import get_fps, get_key_frames, unfrag_video, _run_command
+from common_ml.video_processing import get_fps, get_key_frames, unfrag_video, _run_command, get_frames
 
 test_file = os.path.join(os.path.dirname(__file__), 'test.mp4')
 
@@ -16,6 +16,18 @@ def test_get_key_frames():
         frames = [f.tolist() for f in frames]
         return frames, f_pos, timestamps
     return [tc1]
+
+def test_get_frames():
+    def tc1():
+        frames, timestamps = get_frames(test_file, 2)
+        return [len(frames) == len(timestamps), timestamps]
+    def tc2():
+        frames, timestamps = get_frames(test_file, 3.47)
+        return [len(frames) == len(timestamps), timestamps]
+    def tc3():
+        frames, timestamps = get_frames(test_file, 1)
+        return [len(frames) == len(timestamps), timestamps]
+    return [tc1, tc2, tc3]
 
 def test_unfrag_video():
     def tc1():
@@ -33,6 +45,7 @@ def main():
     tester = Tester(os.path.join(os.path.dirname(__file__), 'test_data'))
     tester.register('test_fps', test_get_fps())
     tester.register('test_key_frames', test_get_key_frames())
+    tester.register('test_frames', test_get_frames())
     tester.register('test_unfrag_video', test_unfrag_video())
     if args.record:
         tester.record(args.tests)
