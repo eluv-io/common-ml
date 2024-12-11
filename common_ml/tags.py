@@ -5,8 +5,10 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple, Dict, List
 
+from common_ml.types import Data
+
 @dataclass
-class VideoTag:
+class VideoTag(Data):
     # VideoTag represents a single tag in a video, possibly containing a text label
     #
     # Has attributes
@@ -19,11 +21,26 @@ class VideoTag:
     text: str
     confidence: Optional[float]=None
 
+    @staticmethod
+    def from_dict(data: dict) -> 'VideoTag':
+        return VideoTag(start_time=data['start_time'], end_time=data['end_time'], text=data['text'], confidence=data.get('confidence'))
+
 @dataclass
-class FrameTag:
+class _Box:
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+@dataclass
+class FrameTag(Data):
     text: str
-    box: Tuple[float, float, float, float]
+    box: _Box
     confidence: Optional[float]=None
+
+    @staticmethod
+    def from_dict(data: dict) -> 'FrameTag':
+        return FrameTag(text=data['text'], box=_Box(**data['box']), confidence=data.get('confidence'))
 
 @dataclass
 class AggTag:

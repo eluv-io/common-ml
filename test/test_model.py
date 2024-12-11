@@ -16,7 +16,7 @@ class FakeFrameModel(FrameModel):
 
     def random_tag(self) -> List[FrameTag]:
         num_tags = random.randint(1, 3)
-        return [FrameTag(f"fake{random.randint(1, 10)}", (0.5, 0.95, 0.95, 0.5)) for _ in range(num_tags)]
+        return [FrameTag.from_dict({"text": f"fake{random.randint(1, 10)}", "box": {"x1": 0.05, "y1": 0.05, "x2": 0.95, "y2": 0.95}}) for _ in range(num_tags)]
     
 def test_tag():
     random.seed(42)
