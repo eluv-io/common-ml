@@ -31,14 +31,14 @@ def get_tags(qhot: str, client: ElvClient, start_time: int, end_time: int, paddi
                 version_hash=qhash, metadata_subtree=f'video_tags/metadata_tags/{file}/metadata_tags/shot_tags', resolve_links=True)
             all_tags.append(shot_tags)
         except HTTPError as e:
-            logger.warn(
+            logger.warning(
                 f"Failed to get tags from file: {file} with error {e}")
         
     res = defaultdict(list)
     ref_times = [max(start_time-padding, 0), end_time+padding]
     for chunk in all_tags:
         if chunk['label'] != 'Shot Tags':
-            logger.warn(
+            logger.warning(
                 f"Chunk label is {chunk['label']}, expected 'Shot Tags'.")
         for tag in chunk['tags']:
             # check if shot overlap with the requested time range
