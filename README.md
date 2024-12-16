@@ -6,4 +6,4 @@ A repository containing common utilites for ML tagging and search
 
 ## Local testing 
 1. `pip install .`
-2.  `python test/test_model.py && python test/test_video_processing.py`
+2.  `python test/test_model.py && python test/test_video_processing.py && python test/test_fabric.py`
