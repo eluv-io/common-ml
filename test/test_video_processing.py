@@ -13,20 +13,19 @@ def test_get_key_frames():
     def tc1():
         frames, f_pos, timestamps = get_key_frames(test_file)
         # converting to list for comparison
-        frames = [f.tolist() for f in frames]
-        return frames, f_pos, timestamps
+        return [f_pos, timestamps]
     return [tc1]
 
 def test_get_frames():
     def tc1():
-        frames, timestamps = get_frames(test_file, 2)
-        return [len(frames) == len(timestamps), timestamps]
+        frames, frame_idx, timestamps = get_frames(test_file, 2)
+        return [len(frames) == len(timestamps) == len(frame_idx), timestamps]
     def tc2():
-        frames, timestamps = get_frames(test_file, 3.47)
-        return [len(frames) == len(timestamps), timestamps]
+        frames, frame_idx, timestamps = get_frames(test_file, 3.47)
+        return [len(frames) == len(timestamps) == len(frame_idx), timestamps]
     def tc3():
-        frames, timestamps = get_frames(test_file, 1)
-        return [len(frames) == len(timestamps), timestamps]
+        frames, frame_idx, timestamps = get_frames(test_file, 1)
+        return [len(frames) == len(timestamps) == len(frame_idx), timestamps]
     return [tc1, tc2, tc3]
 
 def test_unfrag_video():

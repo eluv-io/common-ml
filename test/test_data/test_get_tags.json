@@ -1,0 +1,453 @@
+[
+    {
+        "Object Detection": [
+            {
+                "end_time": 44,
+                "start_time": 0,
+                "text": [
+                    "a drawing of buildings ."
+                ]
+            },
+            {
+                "end_time": 1848,
+                "start_time": 1804,
+                "text": [
+                    "a man is working in front of a bulletin board with papers on it and a poster ."
+                ]
+            },
+            {
+                "end_time": 3564,
+                "start_time": 3520,
+                "text": [
+                    "a man and a woman are standing in front of a bulletin board with a poster on it."
+                ]
+            },
+            {
+                "end_time": 5544,
+                "start_time": 5500,
+                "text": [
+                    "a stack of cardboard boxes ."
+                ]
+            },
+            {
+                "end_time": 6688,
+                "start_time": 6644,
+                "text": [
+                    "a woman holding a clipboard with a blue ribbon in her hair."
+                ]
+            },
+            {
+                "end_time": 8096,
+                "start_time": 8052,
+                "text": [
+                    "a man is standing in front of a paper ."
+                ]
+            },
+            {
+                "end_time": 9592,
+                "start_time": 9548,
+                "text": [
+                    "a woman is looking at a piece of paper ."
+                ]
+            },
+            {
+                "end_time": 11704,
+                "start_time": 11660,
+                "text": [
+                    "a woman is reading a paper next to a monitor."
+                ]
+            },
+            {
+                "end_time": 13068,
+                "start_time": 13024,
+                "text": [
+                    "a poster on a bulletin board shows a man working at a desk with papers on it."
+                ]
+            },
+            {
+                "end_time": 15884,
+                "start_time": 15840,
+                "text": [
+                    "a man stands in front of a bulletin board ."
+                ]
+            },
+            {
+                "end_time": 18700,
+                "start_time": 18656,
+                "text": [
+                    "a man is working at a desk ."
+                ]
+            },
+            {
+                "end_time": 21516,
+                "start_time": 21472,
+                "text": [
+                    "a man is looking at a paper with a note on it."
+                ]
+            },
+            {
+                "end_time": 23716,
+                "start_time": 23672,
+                "text": [
+                    "a man is standing in front of a bulletin board with a paper on it ."
+                ]
+            },
+            {
+                "end_time": 25168,
+                "start_time": 25124,
+                "text": [
+                    "a woman sitting at a desk with a green folder in front of her."
+                ]
+            },
+            {
+                "end_time": 27764,
+                "start_time": 27720,
+                "text": [
+                    "a woman sitting in front of a computer screen ."
+                ]
+            },
+            {
+                "end_time": 29392,
+                "start_time": 29348,
+                "text": [
+                    "a man is looking at papers on a bulletin board ."
+                ]
+            },
+            {
+                "end_time": 30052,
+                "start_time": 30008,
+                "text": [
+                    "a man is looking at papers on a bulletin board with a poster ."
+                ]
+            },
+            {
+                "end_time": 32164,
+                "start_time": 32120,
+                "text": [
+                    "a man stands at a desk in front of a bulletin board ."
+                ]
+            },
+            {
+                "end_time": 33264,
+                "start_time": 33220,
+                "text": [
+                    "a girl with black hair is sitting in front of a white wall."
+                ]
+            },
+            {
+                "end_time": 34276,
+                "start_time": 34232,
+                "text": [
+                    "a woman with a blue bow sits in front of a wall."
+                ]
+            },
+            {
+                "end_time": 36388,
+                "start_time": 36344,
+                "text": [
+                    "a woman with brown hair is looking to the left."
+                ]
+            },
+            {
+                "end_time": 38500,
+                "start_time": 38456,
+                "text": [
+                    "a man and a woman are looking at each other and looking at each other."
+                ]
+            },
+            {
+                "end_time": 42724,
+                "start_time": 40568,
+                "text": [
+                    "a man and a woman are kissing and the woman is wearing a jacket."
+                ]
+            },
+            {
+                "end_time": 44660,
+                "start_time": 44616,
+                "text": [
+                    "a woman in a dress stands in front of a poster ."
+                ]
+            },
+            {
+                "end_time": 45892,
+                "start_time": 45848,
+                "text": [
+                    "a woman is standing in front of a poster ."
+                ]
+            },
+            {
+                "end_time": 48004,
+                "start_time": 47960,
+                "text": [
+                    "a woman in a white dress stands in front of a bulletin board ."
+                ]
+            },
+            {
+                "end_time": 50116,
+                "start_time": 50072,
+                "text": [
+                    "a man and woman are kissing in front of a bulletin board ."
+                ]
+            },
+            {
+                "end_time": 52228,
+                "start_time": 52184,
+                "text": [
+                    "a poster on a bulletin board shows a man and a woman standing in front of a sign ."
+                ]
+            },
+            {
+                "end_time": 54340,
+                "start_time": 54296,
+                "text": [
+                    "a woman is standing in front of a bulletin board ."
+                ]
+            },
+            {
+                "end_time": 55748,
+                "start_time": 55704,
+                "text": [
+                    "a man and woman are kissing in front of a bulletin board with a poster ."
+                ]
+            },
+            {
+                "end_time": 56804,
+                "start_time": 56760,
+                "text": [
+                    "a man and a woman are embracing and looking at each other."
+                ]
+            },
+            {
+                "end_time": 58564,
+                "start_time": 58520,
+                "text": [
+                    "a man and woman are looking into each other's eyes."
+                ]
+            },
+            {
+                "end_time": 60060,
+                "start_time": 60016,
+                "text": [
+                    "a man and a woman are looking at each other and the woman is wearing a plaid shirt."
+                ]
+            },
+            {
+                "end_time": 60896,
+                "start_time": 60852,
+                "text": [
+                    "a man and a woman are looking into each other's eyes."
+                ]
+            },
+            {
+                "end_time": 61732,
+                "start_time": 61688,
+                "text": [
+                    "a man and a woman are standing next to each other."
+                ]
+            },
+            {
+                "end_time": 62568,
+                "start_time": 62524,
+                "text": [
+                    "a woman with long brown hair is standing in front of a bulletin board with papers on it."
+                ]
+            },
+            {
+                "end_time": 63404,
+                "start_time": 63360,
+                "text": [
+                    "a woman in a white shirt stands in front of a stack of boxes."
+                ]
+            },
+            {
+                "end_time": 64284,
+                "start_time": 64240,
+                "text": [
+                    "a woman is using a printer with a paper ."
+                ]
+            },
+            {
+                "end_time": 65120,
+                "start_time": 65076,
+                "text": [
+                    "a woman is working on a printer with a green folder in her hand."
+                ]
+            },
+            {
+                "end_time": 65956,
+                "start_time": 65912,
+                "text": [
+                    "a woman sits at a desk in front of a stack of boxes."
+                ]
+            },
+            {
+                "end_time": 66792,
+                "start_time": 66748,
+                "text": [
+                    "a woman in a white shirt with a blue ribbon in her hair is looking at a file."
+                ]
+            },
+            {
+                "end_time": 67628,
+                "start_time": 67584,
+                "text": [
+                    "a woman with a blue bow is standing in front of a bulletin board with papers on it."
+                ]
+            },
+            {
+                "end_time": 68508,
+                "start_time": 68464,
+                "text": [
+                    "a woman with long brown hair and a blue bow on her head is standing in front of a bulletin board with post it notes on it."
+                ]
+            },
+            {
+                "end_time": 68860,
+                "start_time": 68816,
+                "text": [
+                    "a woman looking at a man with a blue bow on her hair."
+                ]
+            },
+            {
+                "end_time": 69300,
+                "start_time": 69256,
+                "text": [
+                    "a man in a suit ."
+                ]
+            },
+            {
+                "end_time": 69916,
+                "start_time": 69872,
+                "text": [
+                    "a man in a brown sweater and a tie stands in front of a sign ."
+                ]
+            },
+            {
+                "end_time": 70532,
+                "start_time": 70488,
+                "text": [
+                    "a man in a brown sweater stands in front of a paper ."
+                ]
+            }
+        ],
+        "Celebrity Detection": [
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 34540,
+                "start_time": 6820,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 38764,
+                "start_time": 35288,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 39556,
+                "start_time": 39248,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 59092,
+                "start_time": 56936,
+                "text": [
+                    "Christel Takigawa"
+                ]
+            },
+            {
+                "end_time": 61116,
+                "start_time": 60632,
+                "text": [
+                    "Kimbra"
+                ]
+            }
+        ],
+        "Speech to Text": [
+            {
+                "coalesce": true,
+                "end_time": 6121,
+                "start_time": 6120,
+                "text": [
+                    "Hey,"
+                ]
+            },
+            {
+                "coalesce": true,
+                "end_time": 7321,
+                "start_time": 7320,
+                "text": [
+                    "hi."
+                ]
+            },
+            {
+                "end_time": 38161,
+                "start_time": 35920,
+                "text": [
+                    "So that was fun the other night."
+                ]
+            }
+        ]
+    }
+]

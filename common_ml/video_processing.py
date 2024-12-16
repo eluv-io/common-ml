@@ -69,7 +69,7 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
 
     sorted_frames = sorted(((frame, pos, ts) for frame, pos, ts in zip(frames, f_pos, timestamps)), key=lambda x: x[1])
     frames, f_pos, timestamps = zip(*sorted_frames)
-    return frames, f_pos, timestamps
+    return np.stack(frames), list(f_pos), list(timestamps)
 
 # video_file: path to video file
 # fps: frames per second to sample

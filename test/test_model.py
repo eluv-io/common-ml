@@ -23,16 +23,16 @@ def test_tag():
     model = FakeFrameModel()
     def t1():
         ftags, vtags = model.tag_video(test_file, False, 1)
-        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
+        return [{str(i): [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]]
     def t2():
         ftags, vtags = model.tag_video(test_file, True, 1)
-        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
+        return [{str(i): [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]]
     def t3():
         ftags, vtags = model.tag_video(test_file, False, 2)
-        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
+        return [{str(i): [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]]
     def t4():
         ftags, vtags = model.tag_video(test_file, True, 2)
-        return {i: [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]
+        return [{str(i): [asdict(ftag) for ftag in ft] for i, ft in ftags.items()}, [asdict(tag) for tag in vtags]]
     return [t1, t2, t3, t4]
     
 def main():
