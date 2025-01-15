@@ -1,23 +1,43 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Union, Optional, Literal
+from PIL import Image
+import numpy as np
+import json
+import os
+from dataclasses import asdict
 
 from .tags import VideoTag, FrameTag
 from .video_processing import get_frames
+from .utils import get_file_type
 
 class VideoModel(ABC):
     @abstractmethod
-    def tag(self, data: Any) -> List[VideoTag]:
+    def tag(self, fpath: str) -> List[VideoTag]:
+        pass
+
+    def get_config(self) -> dict:
+        return {}
+
+    def set_config(self, config: dict) -> None:
         pass
 
 class FrameModel(ABC):
     @abstractmethod
-    def tag(self, img: Any) -> List[FrameTag]:
+    def tag(self, img: np.ndarray) -> List[FrameTag]:
+        pass
+
+    def get_config(self) -> dict:
+        return {}
+
+    def set_config(self, config: dict) -> None:
         pass
 
     # default method for running frame model on a video file
-    def tag_video(self, video: str, allow_single_frame: bool, fps: int) -> Tuple[Dict[int, List[FrameTag]], List[VideoTag]]:
+    def tag_video(self, fpath: str) -> Tuple[Dict[int, List[FrameTag]], List[VideoTag]]:
+        fps = self.get_config().get("fps", 1)
+        allow_single_frame = self.get_config().get("allow_single_frame", False)
         assert fps > 0, "Frequency must be a positive integer"
-        key_frames, fpos, ts = get_frames(video_file=video, fps=fps)
+        key_frames, fpos, ts = get_frames(video_file=fpath, fps=fps)
         ftags = {pos: self.tag(frame) for pos, frame in zip(fpos, key_frames)}
         video_tags = FrameModel._combine_adjacent(ftags, ts, allow_single_frame)
         return ftags, video_tags
@@ -79,3 +99,40 @@ class FrameModel(ABC):
     @staticmethod
     def _to_milliseconds(seconds: float) -> int:
         return round(seconds * 1000)
+
+# A generic tag function which accepts a list of media files and generates output tags for each file. 
+# Args:
+#   model: the model to use for tagging
+#   files: a list of file paths to tag, can be image, video, or audio depending on the model
+#   output_path: the path to save the output tags
+def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_path: str) -> None:
+    if len(files) == 0:
+        return 
+    if not os.path.exists(output_path):
+        os.makedirs(output_path, exist_ok=True)
+    ftype = get_file_type(files[0])
+    assert all(get_file_type(f) == ftype for f in files), "All files must be of the same type"
+    assert ftype != "unknown", "Unsupported file type"
+    if isinstance(model, VideoModel):
+        for fname in files:
+            vtags = model.tag(fname)
+            with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_tags.json"), 'w') as fout:
+                fout.write(json.dumps([asdict(tag) for tag in vtags]))
+    elif isinstance(model, FrameModel):
+        if ftype == "video":
+            for fname in files:
+                ftags, tags = model.tag_video(fname)
+                with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_tags.json"), 'w') as fout:
+                    fout.write(json.dumps([asdict(tag) for tag in tags]))
+                with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_frametags.json"), 'w') as fout:
+                    ftags = {k: [asdict(tag) for tag in v] for k, v in ftags.items()}
+                    fout.write(json.dumps(ftags))
+        elif ftype == "image":
+            for fname in files:
+                img = Image.open(fname)
+                img_array = np.array(img)
+                frametags = model.tag(img_array)
+                with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_imagetags.json"), 'w') as fout:
+                    fout.write(json.dumps([asdict(tag) for tag in frametags]))
+    else:
+        raise ValueError(f"Unsupported model type {type(model)}, should be either FrameModel or VideoModel")
