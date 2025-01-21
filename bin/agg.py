@@ -5,7 +5,7 @@ import json
 from elv_client_py import ElvClient
 from loguru import logger
 
-from common_ml.tag_formatting import format_fabric_tags
+from common_ml.tag_formatting import format_video_tags, format_asset_tags
 
 def get_auth_token(qid: str, elv_config: str) -> str:
     cmd = f"elv content token create {qid} --config {elv_config} --update"
@@ -27,11 +27,6 @@ def main():
         type=str,
         nargs='+',
         default=""
-    )
-    parser.add_argument(
-        "--save_path",
-        type=str,
-        required=True,
     )
     parser.add_argument(
         "--streams",
@@ -61,7 +56,8 @@ def main():
         write_token = get_write_token(qid, args.config)
         logger.info(f"Created write token for {qid}: {write_token}")
         client = ElvClient.from_configuration_url(fabric_config, auth_token)
-        format_fabric_tags(client, write_token, args.streams, args.interval)
+        format_video_tags(client, write_token, args.streams, args.interval)
+        format_asset_tags(client, write_token)
         if args.finalize:
             finalize(write_token, args.config)
         else:
