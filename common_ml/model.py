@@ -116,15 +116,15 @@ def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_p
     if isinstance(model, VideoModel):
         for fname in files:
             vtags = model.tag(fname)
-            with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_tags.json"), 'w') as fout:
+            with open(os.path.join(output_path, f"{os.path.basename(fname)}_tags.json"), 'w') as fout:
                 fout.write(json.dumps([asdict(tag) for tag in vtags]))
     elif isinstance(model, FrameModel):
         if ftype == "video":
             for fname in files:
                 ftags, tags = model.tag_video(fname)
-                with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_tags.json"), 'w') as fout:
+                with open(os.path.join(output_path, f"{os.path.basename(fname)}_tags.json"), 'w') as fout:
                     fout.write(json.dumps([asdict(tag) for tag in tags]))
-                with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_frametags.json"), 'w') as fout:
+                with open(os.path.join(output_path, f"{os.path.basename(fname)}_frametags.json"), 'w') as fout:
                     ftags = {k: [asdict(tag) for tag in v] for k, v in ftags.items()}
                     fout.write(json.dumps(ftags))
         elif ftype == "image":
@@ -132,7 +132,7 @@ def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_p
                 img = Image.open(fname)
                 img_array = np.array(img)
                 frametags = model.tag(img_array)
-                with open(os.path.join(output_path, f"{os.path.basename(fname).split('.')[0]}_imagetags.json"), 'w') as fout:
+                with open(os.path.join(output_path, f"{os.path.basename(fname)}_imagetags.json"), 'w') as fout:
                     fout.write(json.dumps([asdict(tag) for tag in frametags]))
     else:
         raise ValueError(f"Unsupported model type {type(model)}, should be either FrameModel or VideoModel")

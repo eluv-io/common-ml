@@ -5,6 +5,7 @@ from quick_test_py import Tester
 import os
 from dataclasses import asdict
 import json
+import shutil
 
 from common_ml.model import FrameModel, VideoModel
 from common_ml.tags import FrameTag, VideoTag
@@ -81,25 +82,27 @@ def test_video_run():
         random.seed(42)
         model = FakeVideoModel()
         outpath = os.path.join(os.path.dirname(__file__), 'tags/video')
+        shutil.rmtree(outpath)
         default_tag(model, test_videos, outpath)
-        with open(os.path.join(outpath, 'test_tags.json')) as f:
+        with open(os.path.join(outpath, 'test.mp4_tags.json')) as f:
             tags = json.load(f)
-        with open(os.path.join(outpath, 'test2_tags.json')) as f:
+        with open(os.path.join(outpath, 'test2.mp4_tags.json')) as f:
             tags2 = json.load(f)
         return [tags, tags2]
     def frame_model_test():
         random.seed(42)
         model = FakeFrameModel()
         outpath = os.path.join(os.path.dirname(__file__), 'tags/frame')
+        shutil.rmtree(outpath)
         model.set_config({"fps": 1, "allow_single_frame": True})
         default_tag(model, test_videos, outpath)
-        with open(os.path.join(outpath, 'test_tags.json')) as f:
+        with open(os.path.join(outpath, 'test.mp4_tags.json')) as f:
             tags = json.load(f)
-        with open(os.path.join(outpath, 'test2_tags.json')) as f:
+        with open(os.path.join(outpath, 'test2.mp4_tags.json')) as f:
             tags2 = json.load(f)
-        with open(os.path.join(outpath, 'test_frametags.json')) as f:
+        with open(os.path.join(outpath, 'test.mp4_frametags.json')) as f:
             ftags = json.load(f)
-        with open(os.path.join(outpath, 'test2_frametags.json')) as f:
+        with open(os.path.join(outpath, 'test2.mp4_frametags.json')) as f:
             ftags2 = json.load(f)
         return [tags, ftags, tags2, ftags2]
     return [video_model_test, frame_model_test]
@@ -109,10 +112,11 @@ def test_image_run():
         random.seed(42)
         model = FakeFrameModel()
         outpath = os.path.join(os.path.dirname(__file__), 'tags/frame')
+        shutil.rmtree(outpath)
         default_tag(model, test_images, outpath)
         tags = []
         for f in test_images:
-            with open(os.path.join(outpath, f'{os.path.basename(f).split(".")[0]}_imagetags.json')) as f:
+            with open(os.path.join(outpath, f'{os.path.basename(f)}_imagetags.json')) as f:
                 tags.append(json.load(f))
         return tags
     return [test]

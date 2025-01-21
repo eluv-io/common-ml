@@ -30,3 +30,6 @@ def get_file_type(file_path: str) -> Literal["image", "video", "audio", "unknown
         return "audio"
     else:
         return "unknown"
+    
+def dict_to_str(d: dict) -> str:
+    return '{' + ', '.join(f'"{k}": "{v}"' for k, v in d.items()) + '}'

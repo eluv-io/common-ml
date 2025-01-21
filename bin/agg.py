@@ -16,8 +16,8 @@ def get_write_token(qid: str, elv_config: str) -> str:
     res = json.loads(os.popen(cmd).read())
     return res["q"]["write_token"]
 
-def finalize(qid: str, elv_config: str):
-    cmd = f"elv content finalize {qid} --config {elv_config}"
+def finalize(write_token: str, elv_config: str):
+    cmd = f"elv content finalize {write_token} --config {elv_config}"
     return os.popen(cmd).read()
 
 def main():
@@ -63,7 +63,7 @@ def main():
         client = ElvClient.from_configuration_url(fabric_config, auth_token)
         format_fabric_tags(client, write_token, args.streams, args.interval)
         if args.finalize:
-            finalize(qid, args.config)
+            finalize(write_token, args.config)
         else:
             logger.info(f"Please finalize {qid} manually.\n write token={write_token}")
 
