@@ -1,16 +1,5 @@
-from copy import deepcopy
-import os
 from typing import Literal
-
-def nested_update(original: dict, updates: dict) -> dict:
-    original = deepcopy(original)
-    updates = deepcopy(updates)
-    for key, value in updates.items():
-        if isinstance(value, dict) and key in original and isinstance(original[key], dict):
-            nested_update(original[key], value)
-        else:
-            original[key] = value
-    return original
+import os
 
 def get_file_type(file_path: str) -> Literal["image", "video", "audio", "unknown"]:
     IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
@@ -30,6 +19,3 @@ def get_file_type(file_path: str) -> Literal["image", "video", "audio", "unknown
         return "audio"
     else:
         return "unknown"
-    
-def dict_to_str(d: dict) -> str:
-    return '{' + ', '.join(f'"{k}": "{v}"' for k, v in d.items()) + '}'
