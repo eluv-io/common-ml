@@ -175,7 +175,7 @@ def format_overlay(all_frame_tags: Dict[str, Dict[int, List[FrameTag]]], fps: fl
         for frame_idx, ftags in frame_tags.items():
             timestamp_sec = frame_idx/fps
             bucket_idx = int(timestamp_sec/interval)
-            buckets[bucket_idx]["overlay_tags"]["frame_level_tags"][frame_idx][label_to_track(label)] = [asdict(tag) for tag in ftags]
+            buckets[bucket_idx]["overlay_tags"]["frame_level_tags"][frame_idx][label_to_track(label)] = {"tags": [asdict(tag) for tag in ftags]}
     buckets = [buckets[i] if i in buckets else {"version": 1, "overlay_tags": {"frame_level_tags": {}}} for i in range(max(buckets.keys())+1)]
     return buckets
 
