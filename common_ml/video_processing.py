@@ -113,6 +113,7 @@ def get_frames(video_file: str, fps: int) -> Tuple[np.ndarray, List[int], List[f
     for line in stderr_output.splitlines():
         if "showinfo" in line and "n:" in line:  # Lines containing frame info
             ts = float(re.search(r"pts_time:([0-9.]+)", line).group(1))
+            ts += 1 / (2 * fps)  
             fidx = video_fps * ts
             timestamps.append(ts)
             frame_idx.append(round(fidx))
