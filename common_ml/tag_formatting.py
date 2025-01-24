@@ -11,6 +11,7 @@ from requests.exceptions import HTTPError
 
 from common_ml.tags import AggTag
 from common_ml.tags import VideoTag, FrameTag
+from common_ml.utils import nested_update
 
 def format_asset_tags(client: ElvClient, write_token: str) -> None:
     tmpdir = tempfile.TemporaryDirectory()
@@ -32,7 +33,9 @@ def format_asset_tags(client: ElvClient, write_token: str) -> None:
                 file_to_tags[filename]["image_tags"] = {}
             file_to_tags[filename]["image_tags"].update({trackname: {"tags": tags}})
     filetags = dict(file_to_tags)
-    client.merge_metadata(write_token, filetags, library_id=qlib, metadata_subtree="assets")
+    asset_metadata = client.content_object_metadata(write_token=write_token, metadata_subtree="assets", resolve_links=False)
+    asset_metadata = nested_update(asset_metadata, filetags)
+    client.replace_metadata(write_token, asset_metadata, library_id=qlib, metadata_subtree="assets")
 
     tmpdir.cleanup()
 
