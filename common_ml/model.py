@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Dict, Union, Optional, Literal
-from PIL import Image
+import cv2
 import numpy as np
 import json
 import os
@@ -131,9 +131,10 @@ def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_p
                     fout.write(json.dumps(ftags))
         elif ftype == "image":
             for fname in files:
-                img = Image.open(fname)
-                img_array = np.array(img)
-                frametags = model.tag(img_array)
+                if not os.path.exists(fname):
+                    raise FileNotFoundError(f"File {fname} not found")
+                img = cv2.imread(fname)
+                frametags = model.tag(img)
                 with open(os.path.join(output_path, f"{os.path.basename(fname)}_imagetags.json"), 'w') as fout:
                     fout.write(json.dumps([asdict(tag) for tag in frametags]))
     else:
