@@ -134,6 +134,8 @@ def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_p
                 if not os.path.exists(fname):
                     raise FileNotFoundError(f"File {fname} not found")
                 img = cv2.imread(fname)
+                # change color space to RGB
+                img = img[:, :, ::-1]
                 frametags = model.tag(img)
                 with open(os.path.join(output_path, f"{os.path.basename(fname)}_imagetags.json"), 'w') as fout:
                     fout.write(json.dumps([asdict(tag) for tag in frametags]))
