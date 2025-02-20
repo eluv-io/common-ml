@@ -1,6 +1,11 @@
-from typing import Literal
 import os
 import base64
+import sys
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 def get_file_type(file_path: str) -> Literal["image", "video", "audio", "unknown"]:
     IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
