@@ -9,7 +9,7 @@ from loguru import logger
 import re
 
 def get_fps(video_file: str) -> float:
-    cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v", "-show_frames",
+    cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v",
             "-show_entries", "stream=r_frame_rate,avg_frame_rate",
             "-print_format", "json", video_file]
     try:
