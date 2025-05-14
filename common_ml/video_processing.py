@@ -7,6 +7,8 @@ import json
 import os
 from loguru import logger
 import re
+import cv2
+import random
 
 def get_fps(video_file: str) -> float:
     cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v",
@@ -30,46 +32,67 @@ def get_fps(video_file: str) -> float:
 
     return fps
 
-# input can be either downloadUrl or filename
-def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]:
-    cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v", "-show_frames",
-            "-show_entries", "frame=width,height,pict_type,pkt_pts_time,pts_time",
-            "-print_format", "json", video_file]
-    try:
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-        raise Exception(e.output.decode("utf-8"))
-    except FileNotFoundError as e:
-        raise FileNotFoundError("ffprobe not found in PATH. Make sure ffmpeg is installed.")
-    
-    output = json.loads(output)
-    if "frames" not in output or len(output["frames"]) == 0:
-        raise Exception(f"No frames found in {video_file}")
-    w, h = output["frames"][0]["width"], output["frames"][0]["height"]
-    # some versions do not specify pkt_pts_time, use pts_time in that case
-    timestamp_key = "pkt_pts_time" if "pkt_pts_time" in output["frames"][0] else "pts_time"
+def get_key_frames(video_path: str) -> Tuple[List[np.ndarray], List[int], List[float]]:
+    freq = 0
+    video_part_size = 30.03
+    logger.info(f'[frame] get_video_frames video part is {video_part_size}')
 
-    timestamps = [float(f[timestamp_key]) for f in output["frames"] if f["pict_type"] == 'I']
-    f_pos = [i for i, f in enumerate(output["frames"]) if f["pict_type"] == 'I']
+    if not os.path.exists(video_path):
+        logger.info(f'Video file not exists, check path {video_path}')
+        raise SystemExit
 
-    cmd = ["ffmpeg", "-nostdin", "-i", video_file,
-            "-vf", "select='eq(pict_type,I)'", "-vsync", "2",
-            "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "pipe:"]
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
 
-    process = subprocess.Popen(cmd, stderr=-1, stdout=-1)
-    out, err = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        raise Exception(f"ffmpeg error: {err.decode('utf-8')}")
+    logger.info('Getting i frames')
+    tmp_path = f'{os.path.basename(video_path)}_iframe.txt'
+    os.system(
+        f'ffprobe -hide_banner -select_streams v -show_frames -show_entries frame=pict_type '
+        f'-of csv "{video_path}" 2>> ffprobe.stderr.log | grep frame | grep -n I | '
+        f'cut -d : -f 1 > {tmp_path}'
+    )
 
-    frames = np.frombuffer(out, np.uint8)
-    frames = frames.reshape((-1, h, w, 3))
+    def _get_fnum(freq, fps_min=4, fps_max=8, mezz_dur=video_part_size):
+        with open(tmp_path, 'r') as f:
+            f_num = [int(n.strip()) - 1 for n in f.readlines()]
+        n = len(f_num)
+        if n < mezz_dur * fps_min:
+            freq = int((mezz_dur * fps_min - n) // (n - 1) + 1 + freq)
+            logger.info(f"Sampling frequency modified to {freq}")
+        else:
+            random.seed(1)
+            f_num = sorted(random.sample(f_num, min(n, int(mezz_dur * fps_max))))
+        tmp = []
+        for i in range(1, len(f_num)):
+            tmp.extend([
+                f_num[i - 1] + int((f_num[i] - f_num[i - 1]) * (j + 1) / (freq + 1))
+                for j in range(freq)
+            ])
+        return sorted(set(tmp).union(set(f_num)))
 
-    assert len(timestamps) == frames.shape[0] == len(f_pos), "Key frames returned and key frames extracted from file metadata do not match"
+    f_num = _get_fnum(freq)
+    logger.info(f'Frame IDs to tag: {f_num}')
+    os.remove(tmp_path)
 
-    sorted_frames = sorted(((frame, pos, ts) for frame, pos, ts in zip(frames, f_pos, timestamps)), key=lambda x: x[1])
-    frames, f_pos, timestamps = zip(*sorted_frames)
-    return np.stack(frames), list(f_pos), list(timestamps)
+    images = []
+    timestamps = []
+    n_frame = 0
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if n_frame in f_num:
+            images.append(frame)
+            timestamps.append(n_frame / fps)
+        if n_frame % 1000 == 0:
+            logger.info(f'Capturing frame # {n_frame}')
+        n_frame += 1
+
+    cap.release()
+    assert len(images) == len(f_num)
+    logger.info(f"Total # of frames {len(images)}")
+    return images, f_num, timestamps
 
 # video_file: path to video file
 # fps: frames per second to sample

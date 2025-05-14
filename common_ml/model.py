@@ -7,7 +7,7 @@ import os
 from dataclasses import asdict
 
 from .tags import VideoTag, FrameTag
-from .video_processing import get_frames
+from .video_processing import get_frames, get_key_frames
 from .utils import get_file_type
 
 class VideoModel(ABC):
@@ -37,7 +37,7 @@ class FrameModel(ABC):
         fps = self.get_config().get("fps", 1)
         allow_single_frame = self.get_config().get("allow_single_frame", False)
         assert fps > 0, "Frequency must be a positive integer"
-        key_frames, fpos, ts = get_frames(video_file=fpath, fps=fps)
+        key_frames, fpos, ts = get_key_frames(fpath)
         ftags = {pos: self.tag(frame) for pos, frame in zip(fpos, key_frames)}
         video_tags = FrameModel._combine_adjacent(ftags, ts, allow_single_frame)
         return ftags, video_tags
