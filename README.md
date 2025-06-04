@@ -2,7 +2,7 @@
 A repository containing common utilites for ML tagging and search
 
 ## Install package via pip
-`pip install git+https://github.com/elv-nickB/common-ml.git`
+`pip install git+https://github.com/eluv-io/common-ml.git`
 
 ## Local testing 
 1. `pip install .`
