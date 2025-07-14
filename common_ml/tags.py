@@ -58,3 +58,12 @@ class AggTag:
             return
         text = " ".join([tag.text for tag in tags])
         self.tags[feature] = [VideoTag(start_time=tags[0].start_time, end_time=tags[-1].end_time, text=text, confidence=tags[0].confidence)]
+
+    ## keeps the longest tag for a given feature
+    def keep_longest(self, feature: str) -> None:
+        if feature not in self.tags:
+            return
+        tags = self.tags[feature]
+        if len(tags) < 2:
+            return
+        self.tags[feature] = sorted(tags, key=lambda tag: tag.end_time - tag.start_time, reverse=True)[0:1]
