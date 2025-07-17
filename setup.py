@@ -14,8 +14,6 @@ setup(
         'marshmallow',
         'pillow',
         'opencv-python',
-        'typing-extensions',
-        'quick_test_py @ git+https://github.com/eluv-io/quick-test-py.git#egg=quick_test_py',
-        'elv-client-py @ git+https://github.com/eluv-io/elv-client-py.git#egg=elv-client-py',
+        'typing-extensions'
     ]
 )
