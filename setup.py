@@ -14,7 +14,7 @@ setup(
         'marshmallow',
         'pillow',
         'opencv-python',
-        'typing-extensions'
+        'typing-extensions',
         'av',
     ]
 )
