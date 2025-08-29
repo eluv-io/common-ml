@@ -15,5 +15,6 @@ setup(
         'pillow',
         'opencv-python',
         'typing-extensions'
+        'av',
     ]
 )
