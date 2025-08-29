@@ -73,7 +73,7 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
 
 def get_frames(
     video_file: str,
-    sample_fps: float,
+    fps: float,
 ) -> Tuple[np.ndarray, List[int], List[float]]:
     """
     Args:
@@ -90,6 +90,7 @@ def get_frames(
       - Single decode pass; no ffprobe crawl.
       - Timestamps come from frame.time or pts*time_base; if missing, fallback to idx / get_fps().
     """
+    sample_fps = fps
     if sample_fps <= 0:
         raise ValueError("sample_fps must be > 0")
     dt = 1.0 / sample_fps
