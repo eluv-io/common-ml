@@ -6,7 +6,7 @@ import subprocess
 import json
 import os
 from loguru import logger
-import re
+import av
 
 def get_fps(video_file: str) -> float:
     cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v",
@@ -71,57 +71,95 @@ def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]
     frames, f_pos, timestamps = zip(*sorted_frames)
     return np.stack(frames), list(f_pos), list(timestamps)
 
-# video_file: path to video file
-# fps: frames per second to sample
-def get_frames(video_file: str, fps: int) -> Tuple[np.ndarray, List[int], List[float]]:
-    cmd = f"ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 {video_file}"
-    try:
-        output = subprocess.check_output(cmd.split(' '), stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-        raise Exception(e.output.decode("utf-8"))
-    except FileNotFoundError as e:
-        raise FileNotFoundError("ffprobe not found in PATH. Make sure ffmpeg is installed.")
-    
-    try:
-        output = output.decode("utf-8")
-        w, h = str(output).strip().split(',')
-        w, h = int(w), int(h)
-    except ValueError as e:
-        raise ValueError(f"Could not extract width and height from ffprobe output: {output}")
+def get_frames(
+    video_file: str,
+    sample_fps: float,
+) -> Tuple[np.ndarray, List[int], List[float]]:
+    """
+    Args:
+      video_file: path to video
+      sample_fps: sampling rate in Hz (frames/sec)
 
-    # get frames 
-    cmd = [
-        "ffmpeg",
-        "-i", video_file,        
-        "-vf", f"fps={fps}, showinfo",        
-        "-f", "image2pipe",       
-         "-f", "rawvideo", 
-         "-pix_fmt", "rgb24",        
-        "pipe:1"                
-    ]
+    Returns:
+      frames:  (N, H, W, 3) uint8 RGB frames
+      indices: List[int] global 0-indexed frame numbers (presentation order)
+      times:   List[float] source timestamps (seconds) of each selected frame
 
-    process = subprocess.Popen(cmd, stderr=-1, stdout=-1)
-    out, err = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        raise Exception(f"ffmpeg error: {err.decode('utf-8')}")
-    
-    video_fps = get_fps(video_file)
-    
-    timestamps, frame_idx = [], []
-    stderr_output = err.decode("utf-8")
-    for line in stderr_output.splitlines():
-        if "showinfo" in line and "n:" in line:  # Lines containing frame info
-            ts = float(re.search(r"pts_time:([0-9.]+)", line).group(1))
-            ts += 1 / (2 * fps)  
-            fidx = video_fps * ts
-            timestamps.append(ts)
-            frame_idx.append(round(fidx))
-    
-    frames = np.frombuffer(out, np.uint8)
-    frames = frames.reshape((-1, h, w, 3))
+    Notes:
+      - Accurate for CFR and VFR: select by nearest timestamp to a regular time grid.
+      - Single decode pass; no ffprobe crawl.
+      - Timestamps come from frame.time or pts*time_base; if missing, fallback to idx / get_fps().
+    """
+    if sample_fps <= 0:
+        raise ValueError("sample_fps must be > 0")
+    dt = 1.0 / sample_fps
 
-    return frames, frame_idx, timestamps
+    container = av.open(video_file)
+    stream = container.streams.video[0]
+    stream.thread_type = "AUTO"
+
+    true_fps = get_fps(video_file)
+
+    time_base = float(stream.time_base) if stream.time_base else None
+
+    def frame_time(idx: int, f: av.VideoFrame) -> float:
+        if f.time is not None:
+            return float(f.time)
+        if f.pts is not None and time_base is not None:
+            return float(f.pts) * time_base
+        # Fallback only if the stream gives no usable timestamps.
+        return idx / true_fps
+
+    frames_out: List[np.ndarray] = []
+    idx_out: List[int] = []
+    t_out: List[float] = []
+
+    prev = None                # (frame, global_idx, time)
+    global_idx = -1
+    target_t = None
+    last_selected_idx = -1
+
+    for packet in container.demux(stream):
+        for f in packet.decode():
+            global_idx += 1
+            t = frame_time(global_idx, f)
+
+            if prev is None:
+                prev = (f, global_idx, t)
+                # Anchor the sampling grid at the first frame's timestamp
+                if target_t is None:
+                    target_t = t
+                continue
+
+            cur = (f, global_idx, t)
+
+            # Emit samples for all targets that fall up to current frame time
+            while target_t <= cur[2]:
+                choose_prev = abs(prev[2] - target_t) <= abs(cur[2] - target_t)
+                sel = prev if choose_prev else cur
+
+                if sel[1] != last_selected_idx:  # de-dup if two targets hit same frame
+                    rgb = sel[0].to_ndarray(format="rgb24")
+                    frames_out.append(rgb)
+                    idx_out.append(sel[1])
+                    t_out.append(sel[2])
+                    last_selected_idx = sel[1]
+
+                target_t += dt
+
+            prev = cur
+
+    container.close()
+
+    if frames_out:
+        h, w = frames_out[0].shape[:2]
+        if any(f.shape[:2] != (h, w) for f in frames_out):
+            raise RuntimeError("Variable resolution not supported in this helper.")
+        frames = np.stack(frames_out, axis=0)
+    else:
+        frames = np.empty((0, 0, 0, 3), dtype=np.uint8)
+
+    return frames, idx_out, t_out
 
 def unfrag_video(video_file: str, output_file: str):
     cmd = f"ffmpeg -y -i {video_file} -c copy {output_file}"
@@ -133,7 +171,6 @@ def unfrag_video(video_file: str, output_file: str):
 # Run a command and return it's stdout
 # Throws error if command fails
 def _run_command(cmd: str) -> Tuple[str, str]:
-    logger.debug(f"Running command\n{cmd}\n")
     res = subprocess.run(cmd.split(), capture_output=True, text=True)
     if res.returncode != 0:
         raise RuntimeError(f"Failed to run command\n{cmd}\nstderr=...\n{res.stderr}\nstdout=...\n {res.stdout}")
