@@ -112,3 +112,35 @@ def test_live_mode_batch_files(test_files, output_dir, test_script):
     finally:
         proc.kill()
         proc.wait()
+
+def test_live_mode_batch_files_with_delay(test_files, output_dir, test_script):
+    """Test live mode with startup delay but files sent quickly (should get batch size 3)"""
+    
+    # Start the live mode process with a 1 second delay
+    proc = subprocess.Popen(
+        ['python', test_script, '--delay', '1'],
+        stdin=subprocess.PIPE,
+        text=True,
+    )
+    
+    try:
+        # Send all files quickly right away (even though tagger has startup delay)
+        assert proc.stdin is not None
+        for fpath in test_files:
+            proc.stdin.write(f"{fpath}\n")
+            proc.stdin.flush()
+        
+        # Wait a bit longer for the delayed startup and processing
+        time.sleep(2)
+
+        for fpath in test_files:
+            output_dir = os.path.dirname(fpath)
+            output_file = os.path.join(output_dir, f"{os.path.basename(fpath)}.txt")
+            assert os.path.exists(output_file), f"Output file {output_file} was not created"
+            with open(output_file, 'r') as f:
+                content = f.read().strip()
+            assert content == "3", f"Expected batch size 3 for {fpath}, got {content}"
+        
+    finally:
+        proc.kill()
+        proc.wait()
