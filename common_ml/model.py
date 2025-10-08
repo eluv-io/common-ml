@@ -173,6 +173,12 @@ def run_live_mode(
     
     def process_batch(files):
         """Process a batch of files using the provided function"""
+        valid_files = []
+        for f in files:
+            if os.path.exists(f):
+                valid_files.append(f)
+            else:
+                print(f"Warning: file {f} does not exist, skipping", file=sys.stderr)
         if files:
             print(f"Processing batch of {len(files)} files...", file=sys.stderr)
             tag_fn(files)
@@ -208,6 +214,4 @@ def run_live_mode(
             time.sleep(batch_timeout)
                 
         except KeyboardInterrupt:
-            if current_batch:
-                process_batch(current_batch)
             break

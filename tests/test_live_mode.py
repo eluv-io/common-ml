@@ -11,7 +11,6 @@ def test_script():
     script_dir = os.path.dirname(__file__)
     script_content = os.path.join(script_dir, 'live_test_tagger.py')
     return script_content
-    #return 'live_test_tagger.py'
 
 @pytest.fixture
 def test_files():
@@ -100,6 +99,8 @@ def test_live_mode_batch_files(test_files, output_dir, test_script):
         input_data = '\n'.join(test_files) + '\n'
         proc.stdin.write(input_data)
         proc.stdin.flush()
+
+        time.sleep(0.5)
 
         for fpath in test_files:
             output_dir = os.path.dirname(fpath)
