@@ -179,10 +179,10 @@ def run_live_mode(
                 valid_files.append(f)
             else:
                 print(f"Warning: file {f} does not exist, skipping", file=sys.stderr)
-        if files:
-            print(f"Processing batch of {len(files)} files...", file=sys.stderr)
-            tag_fn(files)
-            print(f"Completed batch of {len(files)} files", file=sys.stderr)
+        if valid_files:
+            print(f"Processing batch of {len(valid_files)} files...", file=sys.stderr)
+            tag_fn(valid_files)
+            print(f"Completed batch of {len(valid_files)} files", file=sys.stderr)
     
     reader_thread = threading.Thread(target=stdin_reader, daemon=True)
     reader_thread.start()
