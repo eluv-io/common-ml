@@ -1,10 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Dict, Union
+import sys
+from typing import List, Tuple, Dict, Union, Callable
 import cv2
 import numpy as np
 import json
 import os
 from dataclasses import asdict
+from queue import Queue
+import threading
+import time
 
 from .tags import VideoTag, FrameTag
 from .video_processing import get_frames
@@ -141,3 +145,69 @@ def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_p
                     fout.write(json.dumps([asdict(tag) for tag in frametags]))
     else:
         raise ValueError(f"Unsupported model type {type(model)}, should be either FrameModel or VideoModel")
+    
+def run_live_mode(
+    tag_fn: Callable[[List[str]], None], 
+    batch_timeout: float=0.2,
+) -> None:
+    """
+    Live mode: reads file paths from stdin and processes them in batches
+    
+    Args:
+        tag_fn: Function that takes (file_paths: List[str])
+    """
+    
+    file_queue = Queue()
+    
+    def stdin_reader():
+        """Thread function to read from stdin and add files to queue"""
+        try:
+            for line in sys.stdin:
+                line = line.strip()
+                if line:
+                    file_queue.put(line)
+        except (EOFError, KeyboardInterrupt):
+            pass
+        finally:
+            file_queue.put(None)  # Signal end of input
+    
+    def process_batch(files):
+        """Process a batch of files using the provided function"""
+        if files:
+            print(f"Processing batch of {len(files)} files...", file=sys.stderr)
+            tag_fn(files)
+            print(f"Completed batch of {len(files)} files", file=sys.stderr)
+    
+    reader_thread = threading.Thread(target=stdin_reader, daemon=True)
+    reader_thread.start()
+    
+    current_batch = []
+    
+    while True:
+        try:
+            while not file_queue.empty():
+                try:
+                    file_path = file_queue.get_nowait()
+                    
+                    if file_path is None:
+                        if current_batch:
+                            process_batch(current_batch)
+                        return
+                    
+                    current_batch.append(file_path)
+                except:
+                    break
+            
+            if current_batch:
+                process_batch(current_batch)
+                current_batch = []
+            
+            if not reader_thread.is_alive() and file_queue.empty():
+                break
+            
+            time.sleep(batch_timeout)
+                
+        except KeyboardInterrupt:
+            if current_batch:
+                process_batch(current_batch)
+            break

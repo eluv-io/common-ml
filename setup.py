@@ -16,5 +16,6 @@ setup(
         'opencv-python',
         'typing-extensions',
         'av',
+        'pytest'
     ]
 )
