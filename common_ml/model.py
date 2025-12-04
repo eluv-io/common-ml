@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import sys
 from typing import List, Tuple, Dict, Union, Callable
 import cv2
-import numpy as np
 import json
 import os
 from dataclasses import asdict
@@ -13,6 +12,10 @@ import time
 from .tags import VideoTag, FrameTag
 from .video_processing import get_frames
 from .utils import get_file_type
+
+class ArrayLike:
+    # just to avoid numpy dependency and give users a type hint
+    pass
 
 class VideoModel(ABC):
     @abstractmethod
@@ -27,7 +30,7 @@ class VideoModel(ABC):
 
 class FrameModel(ABC):
     @abstractmethod
-    def tag(self, img: np.ndarray) -> List[FrameTag]:
+    def tag(self, img: ArrayLike) -> List[FrameTag]:
         pass
 
     def get_config(self) -> dict:
