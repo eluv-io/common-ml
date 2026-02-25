@@ -20,3 +20,9 @@ class Tag:
     source_media: str
     track: str
     frame_info: Optional[FrameInfo]
+
+@dataclass(frozen=True)
+class FrameTag:
+    text: str
+    box: Dict[str, float]
+    confidence: Optional[float]

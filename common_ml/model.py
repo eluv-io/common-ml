@@ -10,8 +10,8 @@ from queue import Queue
 import threading
 import time
 
-from .tags import Tag, FrameInfo
-from .video_processing import get_frames
+from .tags import *
+from .video_processing import get_fps, get_frames
 from .utils import get_file_type
 
 class VideoModel(ABC):
@@ -21,7 +21,7 @@ class VideoModel(ABC):
 
 class FrameModel(ABC):
     @abstractmethod
-    def tag_frame(self, img: np.ndarray) -> List[Tag]:
+    def tag_frame(self, img: np.ndarray) -> List[FrameTag]:
         pass
 
 def get_video_model_from_frame_model(frame_model: FrameModel, fps: float, allow_single_frame: bool) -> VideoModel:
@@ -31,26 +31,20 @@ def get_video_model_from_frame_model(frame_model: FrameModel, fps: float, allow_
         # default method for running frame model on a video file
         def tag(self, fpath: str) -> List[Tag]:
             key_frames, fpos, _ = get_frames(video_file=fpath, fps=fps)
+            video_fps = get_fps(fpath)
             # Flatten frame tags into a list with frame_info populated
             tagged: List[Tag] = []
             frame_tags_dict: Dict[int, List[Tag]] = {}
             for pos, frame in zip(fpos, key_frames):
                 frame_result = frame_model.tag_frame(frame)
                 for t in frame_result:
-                    tag = Tag(
-                        text=t.text,
-                        start_time=t.start_time,
-                        end_time=t.end_time,
-                        source_media=t.source_media,
-                        track=t.track,
-                        frame_info=FrameInfo(frame_idx=pos, box=t.frame_info.box if t.frame_info else {}, confidence=t.frame_info.confidence if t.frame_info else None),
-                    )
+                    tag = frame_tag_to_video_tag(t, pos, fpath)
                     tagged.append(tag)
                     frame_tags_dict.setdefault(pos, []).append(tag) 
-            video_tags = _combine_adjacent(frame_tags_dict, allow_single_frame, fps)
+            video_tags = _combine_adjacent(frame_tags_dict, allow_single_frame, video_fps)
             return tagged + video_tags
         
-        def tag_frame(self, img: np.ndarray) -> List[Tag]:
+        def tag_frame(self, img: np.ndarray) -> List[FrameTag]:
             return frame_model.tag_frame(img)
 
     return VideoFrameModel()
@@ -115,6 +109,16 @@ def _combine_adjacent(frame_tags_dict: Dict[int, List[Tag]], allow_single_frame:
 
     return result
 
+def frame_tag_to_video_tag(frame_tag: FrameTag, frame_idx: int, source_media: str) -> Tag:
+    return Tag(
+        text=frame_tag.text,
+        start_time=_to_milliseconds(frame_idx / get_fps(source_media)),
+        end_time=_to_milliseconds((frame_idx + 1) / get_fps(source_media)),
+        source_media=source_media,
+        track="",
+        frame_info=FrameInfo(frame_idx=frame_idx, box=frame_tag.box, confidence=frame_tag.confidence),
+    )
+
 # A generic tag function which accepts a list of media files and generates output tags for each file. 
 # Args:
 #   model: the model to use for tagging
@@ -138,7 +142,8 @@ def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_p
                 img = img[:, :, ::-1]
                 frametags = model.tag_frame(img)
                 for tag in frametags:
-                    fout.write(json.dumps(asdict(tag)) + '\n')
+                    vtag = frame_tag_to_video_tag(tag, frame_idx=0, source_media=fname)
+                    fout.write(json.dumps(asdict(vtag)) + '\n')
             elif ftype == "video":
                 assert isinstance(model, VideoModel)
                 vtags = model.tag(fname)
