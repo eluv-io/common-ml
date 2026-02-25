@@ -120,7 +120,7 @@ def _combine_adjacent(frame_tags_dict: Dict[int, List[Tag]], allow_single_frame:
 #   model: the model to use for tagging
 #   files: a list of file paths to tag, can be image, video, or audio depending on the model
 #   output_path: the path to save the output tags
-def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_path: str) -> None:
+def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_path: str="tags.jsonl") -> None:
     if len(files) == 0:
         return 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
