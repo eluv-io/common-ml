@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import sys
-from typing import List, Tuple, Dict, Union, Callable
+from typing import List, Dict, Union, Callable
 import cv2
 import numpy as np
 import json
@@ -10,7 +10,7 @@ from queue import Queue
 import threading
 import time
 
-from .tags import Tag
+from .tags import Tag, FrameInfo
 from .video_processing import get_frames
 from .utils import get_file_type
 
@@ -30,24 +30,24 @@ def get_video_model_from_frame_model(frame_model: FrameModel, fps: float, allow_
     class VideoFrameModel(VideoModel, FrameModel):
         # default method for running frame model on a video file
         def tag(self, fpath: str) -> List[Tag]:
-            from .tags import FrameInfo
-            key_frames, fpos, ts = get_frames(video_file=fpath, fps=fps)
+            key_frames, fpos, _ = get_frames(video_file=fpath, fps=fps)
             # Flatten frame tags into a list with frame_info populated
             tagged: List[Tag] = []
-            ftags: Dict[int, List[Tag]] = {}
+            frame_tags_dict: Dict[int, List[Tag]] = {}
             for pos, frame in zip(fpos, key_frames):
                 frame_result = frame_model.tag_frame(frame)
-                ftags[pos] = frame_result
                 for t in frame_result:
-                    tagged.append(Tag(
+                    tag = Tag(
                         text=t.text,
                         start_time=t.start_time,
                         end_time=t.end_time,
                         source_media=t.source_media,
                         track=t.track,
                         frame_info=FrameInfo(frame_idx=pos, box=t.frame_info.box if t.frame_info else {}, confidence=t.frame_info.confidence if t.frame_info else None),
-                    ))
-            video_tags = _combine_adjacent(tagged, ts, allow_single_frame)
+                    )
+                    tagged.append(tag)
+                    frame_tags_dict.setdefault(pos, []).append(tag) 
+            video_tags = _combine_adjacent(frame_tags_dict, allow_single_frame, fps)
             return tagged + video_tags
         
         def tag_frame(self, img: np.ndarray) -> List[Tag]:
@@ -59,25 +59,11 @@ def get_video_model_from_frame_model(frame_model: FrameModel, fps: float, allow_
 def _to_milliseconds(seconds: float) -> int:
     return round(seconds * 1000)
 
-def _combine_adjacent(frame_tags: List[Tag], timestamps: List[float], allow_single_frame: bool) -> List[Tag]:
-    if len(frame_tags) == 0:
-        return []
-    if len(timestamps) <= 1:
+def _combine_adjacent(frame_tags_dict: Dict[int, List[Tag]], allow_single_frame: bool, fps: float) -> List[Tag]:
+    if len(frame_tags_dict) == 0:
         return []
 
-    # Build dict from list, grouping tags by their frame index
-    frame_tags_dict: Dict[int, List[Tag]] = {}
-    for tag in frame_tags:
-        idx = tag.frame_info.frame_idx
-        if idx not in frame_tags_dict:
-            frame_tags_dict[idx] = []
-        frame_tags_dict[idx].append(tag)
-
-    f_idx = sorted(list(frame_tags_dict.keys()))
-    f_idx_to_time = {idx: t for idx, t in zip(f_idx, timestamps)}
-
-    _approx_fps = (f_idx[-1] - f_idx[0]) / (timestamps[-1] - timestamps[0])
-    f_intv = 1 / _approx_fps
+    f_intv = 1 / fps
 
     # maps a tag text value to (list of frame indices, representative tag for metadata)
     tag_to_frames: Dict[str, List[int]] = {}
@@ -120,8 +106,8 @@ def _combine_adjacent(frame_tags: List[Tag], timestamps: List[float], allow_sing
             if allow_single_frame or right > left:
                 result.append(Tag(
                     text=text,
-                    start_time=_to_milliseconds(f_idx_to_time[left]),
-                    end_time=_to_milliseconds(f_idx_to_time[right] + f_intv),
+                    start_time=_to_milliseconds(left / fps),
+                    end_time=_to_milliseconds(right / fps + f_intv),
                     source_media=rep.source_media,
                     track=rep.track,
                     frame_info=None,
@@ -148,6 +134,7 @@ def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_p
                 raise FileNotFoundError(f"File {fname} not found")
             img = cv2.imread(fname)
             # change color space to RGB
+            assert img is not None, f"Failed to read image {fname}"
             img = img[:, :, ::-1]
             frametags = model.tag_frame(img)
             with open(output_path, 'w') as fout:
