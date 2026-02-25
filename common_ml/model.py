@@ -122,33 +122,30 @@ def _combine_adjacent(frame_tags_dict: Dict[int, List[Tag]], allow_single_frame:
 #   output_path: the path to save the output tags
 def default_tag(model: Union[VideoModel, FrameModel], files: List[str], output_path: str="tags.jsonl") -> None:
     if len(files) == 0:
-        return 
+        return
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    ftype = get_file_type(files[0])
-    assert all(get_file_type(f) == ftype for f in files), "All files must be of the same type"
-    assert ftype != "unknown", "Unsupported file type"
-    if ftype == "image":
-        assert isinstance(model, FrameModel), "For image files, model must be a FrameModel"
+    with open(output_path, 'w') as fout:
         for fname in files:
-            if not os.path.exists(fname):
-                raise FileNotFoundError(f"File {fname} not found")
-            img = cv2.imread(fname)
-            # change color space to RGB
-            assert img is not None, f"Failed to read image {fname}"
-            img = img[:, :, ::-1]
-            frametags = model.tag_frame(img)
-            with open(output_path, 'w') as fout:
+            ftype = get_file_type(fname)
+            assert ftype != "unknown", f"Unsupported file type for {fname}"
+            if ftype == "image":
+                assert isinstance(model, FrameModel), "For image files, model must be a FrameModel"
+                if not os.path.exists(fname):
+                    raise FileNotFoundError(f"File {fname} not found")
+                img = cv2.imread(fname)
+                # change color space to RGB
+                assert img is not None, f"Failed to read image {fname}"
+                img = img[:, :, ::-1]
+                frametags = model.tag_frame(img)
                 for tag in frametags:
                     fout.write(json.dumps(asdict(tag)) + '\n')
-    elif ftype == "video":
-        assert isinstance(model, VideoModel)
-        for fname in files:
-            vtags = model.tag(fname)
-            with open(output_path, 'w') as fout:
+            elif ftype == "video":
+                assert isinstance(model, VideoModel)
+                vtags = model.tag(fname)
                 for tag in vtags:
                     fout.write(json.dumps(asdict(tag)) + '\n')
-    else:
-        raise ValueError(f"Unsupported model type {type(model)}, should be either FrameModel or VideoModel")
+            else:
+                raise ValueError(f"Unsupported file type {ftype} for {fname}")
     
 def run_live_mode(
     tag_fn: Callable[[List[str]], None], 
