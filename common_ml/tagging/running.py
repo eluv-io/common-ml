@@ -1,11 +1,20 @@
 
-from typing import Dict
+from typing import List, Union
+import cv2
+import json
+import os
+from dataclasses import asdict
 from dataclasses import dataclass
+from queue import Queue
+import threading
+import time
 from functools import lru_cache
+import sys
 
 from common_ml.tagging.model_types import *
 from common_ml.tagging.messages import *
 from common_ml.video_processing import get_fps, get_frames
+from common_ml.utils import get_file_type
 
 def get_video_model_from_frame_model(
     frame_model: BatchFrameModel, 
@@ -21,12 +30,12 @@ def get_video_model_from_frame_model(
         tag: Tag
 
     class NewModel(VideoModel):
-        def tag(self, fpath: str) -> List[Tag]:
+        def tag_video(self, fpath: str) -> List[Tag]:
             key_frames, frame_indices, _ = get_frames(video_file=fpath, fps=fps)
             video_fps = get_fps(fpath)
             # flatten frame tags into a list with frame_info populated
             tagged_w_pos: List[TagWithPos] = []
-            ftag_by_img = frame_model.tag(key_frames)
+            ftag_by_img = frame_model.tag_frames(key_frames)
             for pos, (fidx, ftags) in enumerate(zip(frame_indices, ftag_by_img)):
                 for t in ftags:
                     converted_tag = self._frame_tag_to_video_tag(t, fidx, fpath)
@@ -204,3 +213,88 @@ def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
             elif ftype == "image":
                 raise ValueError(f"VideoModel does not support image input for {fname}, use default_tag_frame_model instead")
             raise ValueError(f"Unsupported file type {ftype} for {fname}")
+
+def run_live(
+    model: Union[VideoModel, FrameModel, BatchFrameModel],
+    output_path: str,
+    batch_timeout: float=0.2,
+    fps: float=1,
+    allow_single_frame: bool=True,
+) -> None:
+    """
+    Live mode: reads file paths from stdin and processes them in batches
+    
+    Args:
+        model: The model to use for tagging, can be VideoModel, FrameModel, or BatchFrameModel
+        output_path: The file path to write the output tags (.jsonl format)
+        batch_timeout: Timeout for batching files
+        fps: Frames per second, only relevant or FrameModel or BatchFrameModel when processing videos
+        allow_single_frame: Whether to allow processing of single-frame videos, only relevant for FrameModel or BatchFrameModel
+    """
+
+    def tag_fn(files: List[str]):
+        if isinstance(model, VideoModel):
+            default_tag(model, files, output_path=output_path)
+        elif isinstance(model, (FrameModel, BatchFrameModel)):
+            default_tag_frame_model(model, files, output_path=output_path, fps=fps, allow_single_frame=allow_single_frame)
+        else:
+            raise ValueError("Model must be VideoModel, FrameModel, or BatchFrameModel")
+    
+    file_queue = Queue()
+    
+    def stdin_reader():
+        """Thread function to read from stdin and add files to queue"""
+        try:
+            for line in sys.stdin:
+                line = line.strip()
+                if line:
+                    file_queue.put(line)
+        except (EOFError, KeyboardInterrupt):
+            pass
+        finally:
+            file_queue.put(None)
+    
+    def process_batch(files):
+        """Process a batch of files using the provided function"""
+        valid_files = []
+        for f in files:
+            if os.path.exists(f):
+                valid_files.append(f)
+            else:
+                print(f"Warning: file {f} does not exist, skipping", file=sys.stderr)
+        if valid_files:
+            print(f"Processing batch of {len(valid_files)} files...", file=sys.stderr)
+            tag_fn(valid_files)
+            print(f"Completed batch of {len(valid_files)} files", file=sys.stderr)
+    
+    reader_thread = threading.Thread(target=stdin_reader, daemon=True)
+    reader_thread.start()
+    
+    current_batch = []
+    
+    while True:
+        try:
+            while not file_queue.empty():
+                try:
+                    file_path = file_queue.get_nowait()
+                    
+                    if file_path is None:
+                        if current_batch:
+                            process_batch(current_batch)
+                        return
+                    
+                    current_batch.append(file_path)
+                except:
+                    break
+            
+            if current_batch:
+                process_batch(current_batch)
+                current_batch = []
+            
+            if not reader_thread.is_alive() and file_queue.empty():
+                break
+            
+            time.sleep(batch_timeout)
+                
+        except KeyboardInterrupt:
+            break
