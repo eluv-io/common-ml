@@ -176,3 +176,31 @@ def default_tag_frame_model(
                     fout.write(json.dumps(asdict(tag)) + '\n')
             else:
                 raise ValueError(f"Unsupported file type {ftype} for {fname}")
+    
+
+def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
+
+    """
+    A generic tag function which accepts a list of media files and generates output tags for each file. 
+    
+    Args:
+      model: the model to use for tagging
+      files: a list of file paths to tag, can be image, video, or audio depending on the model
+      output_path: the path to save the output tags
+    """
+
+    if len(files) == 0:
+        return
+        
+    with open(output_path, 'w') as fout:
+        for fname in files:
+            ftype = get_file_type(fname)
+            if ftype == "unknown":
+                raise ValueError(f"Unsupported file type for {fname}")
+            if ftype == "video":
+                vtags = model.tag_video(fname)
+                for tag in vtags:
+                    fout.write(json.dumps(asdict(tag)) + '\n')
+            elif ftype == "image":
+                raise ValueError(f"VideoModel does not support image input for {fname}, use default_tag_frame_model instead")
+            raise ValueError(f"Unsupported file type {ftype} for {fname}")
