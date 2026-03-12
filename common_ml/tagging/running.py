@@ -110,3 +110,69 @@ def get_video_model_from_frame_model(
         
     return NewModel()
 
+def batchify_frame_model(model: FrameModel) -> BatchFrameModel:
+    class NewModel(BatchFrameModel):
+        def tag_frames(self, imgs: np.ndarray) -> List[List[FrameTag]]:
+            return [model.tag_frame(img) for img in imgs]
+    return NewModel()
+
+def default_tag_frame_model(
+    model: Union[FrameModel, BatchFrameModel], 
+    files: List[str], 
+    output_path: str,
+    fps: float = 1.0,
+    allow_single_frame: bool = True
+) -> None:
+    """
+    A generic tag function for tagging with FrameModels. Input files can be images or videos. 
+    
+    Args:
+      model: the model to use for tagging
+      files: a list of file paths to tag, can be image or video depending on the model
+      output_path: the path to write the output tags
+    """
+    if isinstance(model, BatchFrameModel):
+        batched_model = model
+    elif isinstance(model, FrameModel):
+        batched_model = batchify_frame_model(model)
+    else:
+        raise ValueError("Model must be either FrameModel or BatchFrameModel")
+
+    # wrap frame model as video model in case input is video
+    video_model = get_video_model_from_frame_model(batched_model, fps=fps, allow_single_frame=allow_single_frame)
+
+    if len(files) == 0:
+        return
+        
+    with open(output_path, 'a') as fout:
+        for fname in files:
+            if not os.path.exists(fname):
+                raise FileNotFoundError(f"File {fname} not found")
+            ftype = get_file_type(fname)
+            if ftype == "unknown":
+                raise ValueError(f"Unsupported file type for {fname}")
+            if ftype == "image":
+                img = cv2.imread(fname)
+                if img is None:
+                    raise ValueError(f"Failed to read image {fname}")
+
+                # change color space to RGB
+                img = img[:, :, ::-1]
+
+                frametags = batched_model.tag_frames(img.reshape(1, *img.shape))[0]
+                for ftag in frametags:
+                    out_tag = Tag(
+                        start_time=0,
+                        end_time=0,
+                        tag=ftag.tag,
+                        source_media=fname,
+                        track="",
+                        frame_info=FrameInfo(frame_idx=0, box=ftag.box)
+                    )
+                    fout.write(json.dumps(asdict(out_tag)) + '\n')
+            elif ftype == "video":
+                vtags = video_model.tag_video(fname)
+                for tag in vtags:
+                    fout.write(json.dumps(asdict(tag)) + '\n')
+            else:
+                raise ValueError(f"Unsupported file type {ftype} for {fname}")
