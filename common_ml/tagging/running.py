@@ -1,4 +1,5 @@
 
+import argparse
 from typing import List, Union
 import cv2
 import json
@@ -214,7 +215,7 @@ def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
                 raise ValueError(f"VideoModel does not support image input for {fname}, use default_tag_frame_model instead")
             raise ValueError(f"Unsupported file type {ftype} for {fname}")
 
-def run_live(
+def start_tag_loop(
     model: Union[VideoModel, FrameModel, BatchFrameModel],
     output_path: str,
     batch_timeout: float=0.2,
@@ -298,3 +299,15 @@ def run_live(
                 
         except KeyboardInterrupt:
             break
+
+def serve_model(
+    model: Union[VideoModel, FrameModel, BatchFrameModel],
+    batch_timeout: float=0.2,
+    fps: float=1,
+    allow_single_frame: bool=True,
+):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output_path', required=True, help='Path to write output tags (.jsonl)')
+    args = parser.parse_args()
+
+    start_tag_loop(model, output_path=args.output_path, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)
