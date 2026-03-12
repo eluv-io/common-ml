@@ -29,7 +29,7 @@ def get_video_model_from_frame_model(
             ftag_by_img = frame_model.tag(key_frames)
             for pos, (fidx, ftags) in enumerate(zip(frame_indices, ftag_by_img)):
                 for t in ftags:
-                    converted_tag = frame_tag_to_video_tag(t, fidx, fpath)
+                    converted_tag = self._frame_tag_to_video_tag(t, fidx, fpath)
                     tagged_w_pos.append(
                         TagWithPos(
                             pos=pos,

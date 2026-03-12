@@ -19,5 +19,3 @@ class Tag:
 class FrameTag:
     tag: str
     box: Dict[str, float]
-    track: str
-    source_media: str
