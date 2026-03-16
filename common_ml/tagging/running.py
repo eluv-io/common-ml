@@ -13,7 +13,7 @@ from functools import lru_cache
 import sys
 
 from common_ml.tagging.model_types import *
-from common_ml.tagging.messages import *
+from common_ml.tagging.tag_types import *
 from common_ml.video_processing import get_fps, get_frames
 from common_ml.utils import get_file_type
 

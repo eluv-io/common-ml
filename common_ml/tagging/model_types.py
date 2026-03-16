@@ -2,7 +2,7 @@ from typing import List, Protocol, runtime_checkable
 
 import numpy as np
 
-from common_ml.tagging.messages import Tag, FrameTag
+from common_ml.tagging.tag_types import Tag, FrameTag
 
 @runtime_checkable
 class VideoModel(Protocol):

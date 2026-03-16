@@ -1,21 +1,26 @@
-from typing import Optional, Dict
+from typing import Literal, Optional, Dict
 from dataclasses import dataclass
 
-@dataclass(frozen=True)
-class FrameInfo:
-    frame_idx: int
-    box: Dict[str, float]
+from common_ml.tagging.tag_types import Tag
 
-@dataclass(frozen=True)
-class Tag:
-    start_time: int
-    end_time: int
-    tag: str
-    source_media: str
-    track: str
-    frame_info: Optional[FrameInfo]
+class Message: ...
+
+class TagMessage(Message):
+    type: Literal['tag']
+    data: Tag
+
+class ProgressMessage(Message):
+    type: Literal['progress']
+    data: Dict[str, float]
+
+class ErrorMessage(Message):
+    type: Literal['error']
+    data: Dict[str, str]
 
 @dataclass
-class FrameTag:
-    tag: str
-    box: Dict[str, float]
+class Progress:
+    source_media: str
+
+@dataclass
+class Error:
+    message: str
