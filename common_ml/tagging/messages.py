@@ -1,9 +1,17 @@
-from typing import Literal, Optional, Dict
+from typing import List, Literal, Optional, Dict, Protocol
 from dataclasses import dataclass
 
 from common_ml.tagging.tag_types import Tag
 
 class Message: ...
+
+@dataclass
+class Progress:
+    source_media: str
+
+@dataclass
+class Error:
+    message: str
 
 @dataclass
 class TagMessage(Message):
@@ -13,17 +21,9 @@ class TagMessage(Message):
 @dataclass
 class ProgressMessage(Message):
     type: Literal['progress']
-    data: Dict[str, float]
+    data: Progress
 
 @dataclass
 class ErrorMessage(Message):
     type: Literal['error']
-    data: Dict[str, str]
-
-@dataclass
-class Progress:
-    source_media: str
-
-@dataclass
-class Error:
-    message: str
+    data: Error
