@@ -23,11 +23,13 @@ class FakeFrameModel(FrameModel):
 
     def tag_frame(self, img):
         if self.call_count % 2 == 0:
-            return [FrameTag(tag="a", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4}), FrameTag(tag="b", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4})]
+            res = [FrameTag(tag="a", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4}), FrameTag(tag="b", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4})]
         elif (self.call_count // 2) % 2 == 0:
-            return [FrameTag(tag="a", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4})]
+            res = [FrameTag(tag="a", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4})]
         else:
-            return [FrameTag(tag="b", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4})]
+            res = [FrameTag(tag="b", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4})]
+        self.call_count += 1
+        return res
 
 
 @pytest.fixture
@@ -46,12 +48,12 @@ def batch_frame_model(frame_model):
 
 @pytest.fixture
 def test_videos():
-    return [os.path.join(TEST_DATA, "test1.mp4"), os.path.join(TEST_DATA, "test2.mp4")]
+    return [os.path.join(TEST_DATA, "1.mp4"), os.path.join(TEST_DATA, "2.mp4")]
 
 
 @pytest.fixture
 def test_images():
-    return [os.path.join(TEST_DATA, "test1.png"), os.path.join(TEST_DATA, "test2.png")]
+    return [os.path.join(TEST_DATA, "1.jpg"), os.path.join(TEST_DATA, "2.jpg")]
 
 @pytest.fixture
 def test_folder():

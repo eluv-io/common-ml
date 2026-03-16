@@ -56,6 +56,8 @@ def get_video_model_from_frame_model(
         def _combine_adjacent(self, tags: List[TagWithPos], allow_single_frame: bool, fps: float) -> List[Tag]:
             if len(tags) == 0:
                 return []
+            
+            frame_time = self._to_milliseconds(1 / fps)
 
             # group TagWithPos entries by tag value
             tag_to_items: Dict[str, List[TagWithPos]] = {}
@@ -80,7 +82,7 @@ def get_video_model_from_frame_model(
                             result.append(Tag(
                                 tag=text,
                                 start_time=left.tag.start_time,
-                                end_time=right.tag.end_time,
+                                end_time=right.tag.end_time + frame_time,
                                 source_media=left.tag.source_media,
                                 track=left.tag.track,
                                 frame_info=None,
@@ -93,7 +95,7 @@ def get_video_model_from_frame_model(
                     result.append(Tag(
                         tag=text,
                         start_time=left.tag.start_time,
-                        end_time=right.tag.end_time,
+                        end_time=right.tag.end_time + frame_time,
                         source_media=left.tag.source_media,
                         track=left.tag.track,
                         frame_info=None,
@@ -106,10 +108,11 @@ def get_video_model_from_frame_model(
             return get_fps(source_media)
     
         def _frame_tag_to_video_tag(self, frame_tag: FrameTag, frame_idx: int, source_media: str) -> Tag:
+            ts = self._to_milliseconds(frame_idx / self._cached_fps(source_media))
             return Tag(
                 tag=frame_tag.tag,
-                start_time=self._to_milliseconds(frame_idx / get_fps(source_media)),
-                end_time=self._to_milliseconds((frame_idx + 1) / get_fps(source_media)),
+                start_time=ts,
+                end_time=ts,
                 source_media=source_media,
                 track="",
                 frame_info=FrameInfo(frame_idx=frame_idx, box=frame_tag.box),
@@ -153,14 +156,17 @@ def default_tag_frame_model(
 
     if len(files) == 0:
         return
-        
+
+    for fname in files:
+        if not os.path.exists(fname):
+            raise FileNotFoundError(f"File {fname} not found")
+        ftype = get_file_type(fname)
+        if ftype not in ("video", "image"):
+            raise ValueError(f"Unsupported file type for {fname}")
+
     with open(output_path, 'a') as fout:
         for fname in files:
-            if not os.path.exists(fname):
-                raise FileNotFoundError(f"File {fname} not found")
             ftype = get_file_type(fname)
-            if ftype == "unknown":
-                raise ValueError(f"Unsupported file type for {fname}")
             if ftype == "image":
                 img = cv2.imread(fname)
                 if img is None:
@@ -204,6 +210,8 @@ def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
         
     with open(output_path, 'w') as fout:
         for fname in files:
+            if not os.path.exists(fname):
+                raise FileNotFoundError(f"missing {fname}")
             ftype = get_file_type(fname)
             if ftype not in ("image", "video"):
                 raise ValueError(f"Unsupported file type for {fname}")
