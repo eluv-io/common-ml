@@ -205,15 +205,15 @@ def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
     with open(output_path, 'w') as fout:
         for fname in files:
             ftype = get_file_type(fname)
-            if ftype == "unknown":
+            if ftype not in ("image", "video"):
                 raise ValueError(f"Unsupported file type for {fname}")
-            if ftype == "video":
-                vtags = model.tag_video(fname)
-                for tag in vtags:
-                    fout.write(json.dumps(asdict(tag)) + '\n')
-            elif ftype == "image":
+            if ftype == "image":
                 raise ValueError(f"VideoModel does not support image input for {fname}, use default_tag_frame_model instead")
-            raise ValueError(f"Unsupported file type {ftype} for {fname}")
+            
+        for fname in files:
+            vtags = model.tag_video(fname)
+            for tag in vtags:
+                fout.write(json.dumps(asdict(tag)) + '\n')
 
 def start_tag_loop(
     model: Union[VideoModel, FrameModel, BatchFrameModel],

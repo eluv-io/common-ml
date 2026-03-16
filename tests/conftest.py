@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 import pytest
 from common_ml.tagging.model_types import VideoModel, FrameModel
 from common_ml.tagging.messages import Tag, FrameTag
@@ -50,3 +52,9 @@ def test_videos():
 @pytest.fixture
 def test_images():
     return [os.path.join(TEST_DATA, "test1.png"), os.path.join(TEST_DATA, "test2.png")]
+
+@pytest.fixture
+def test_folder():
+    temp_path = tempfile.mkdtemp()
+    yield temp_path
+    shutil.rmtree(temp_path)
