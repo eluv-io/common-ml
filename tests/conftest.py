@@ -3,7 +3,7 @@ import shutil
 import tempfile
 import pytest
 from common_ml.tagging.model_types import VideoModel, FrameModel
-from common_ml.tagging.messages import Tag, FrameTag
+from common_ml.tagging.tag_types import *
 from common_ml.tagging.running import *
 
 

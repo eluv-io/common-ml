@@ -14,8 +14,16 @@ import sys
 
 from common_ml.tagging.model_types import *
 from common_ml.tagging.tag_types import *
+from common_ml.tagging.messages import *
 from common_ml.video_processing import get_fps, get_frames
 from common_ml.utils import get_file_type
+
+def _write_tag_msg(fout, tag: Tag):
+    tag_msg = TagMessage(
+        type="tag",
+        data=tag
+    )
+    fout.write(json.dumps(asdict(tag_msg)) + '\n')
 
 def get_video_model_from_frame_model(
     frame_model: BatchFrameModel, 
@@ -185,14 +193,13 @@ def default_tag_frame_model(
                         track="",
                         frame_info=FrameInfo(frame_idx=0, box=ftag.box)
                     )
-                    fout.write(json.dumps(asdict(out_tag)) + '\n')
+                    _write_tag_msg(fout, out_tag)
             elif ftype == "video":
                 vtags = video_model.tag_video(fname)
                 for tag in vtags:
-                    fout.write(json.dumps(asdict(tag)) + '\n')
+                    _write_tag_msg(fout, tag)
             else:
                 raise ValueError(f"Unsupported file type {ftype} for {fname}")
-    
 
 def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
 
@@ -207,7 +214,7 @@ def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
 
     if len(files) == 0:
         return
-        
+
     with open(output_path, 'w') as fout:
         for fname in files:
             if not os.path.exists(fname):
@@ -217,11 +224,11 @@ def default_tag(model: VideoModel, files: List[str], output_path: str) -> None:
                 raise ValueError(f"Unsupported file type for {fname}")
             if ftype == "image":
                 raise ValueError(f"VideoModel does not support image input for {fname}, use default_tag_frame_model instead")
-            
+
         for fname in files:
             vtags = model.tag_video(fname)
             for tag in vtags:
-                fout.write(json.dumps(asdict(tag)) + '\n')
+                _write_tag_msg(fout, tag)
 
 def start_tag_loop(
     model: Union[VideoModel, FrameModel, BatchFrameModel],
