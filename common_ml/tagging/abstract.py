@@ -1,6 +1,6 @@
 from typing import List, Protocol
 
-from common_ml.tagging.tag_types import Tag
+from common_ml.tagging.models.tag_types import Tag
 from tagging.messages import Message
 
 class MessageProducer(Protocol):

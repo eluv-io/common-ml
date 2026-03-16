@@ -6,34 +6,12 @@ from queue import Queue
 import threading
 import time
 import sys
-from loguru import logger
 
 from common_ml.tagging.abstract import MessageProducer
-from common_ml.tagging.model_types import *
-from common_ml.tagging.tag_types import *
+from common_ml.tagging.models.abstract import *
+from common_ml.tagging.file_tagger_adapt import *
+from common_ml.tagging.producer_adapt import *
 from common_ml.tagging.messages import *
-from common_ml.tagging.conversion import *
-
-def get_message_producer_from_file_tagger(file_tagger: FileTagger, continue_on_error: bool = False) -> MessageProducer:
-    
-    class NewMessageProducer(MessageProducer):
-        def produce_messages(self, files: List[str]) -> List[Message]:
-            res = []
-
-            for fname in files:
-                try:
-                    file_tagger.tag(fname)
-                except Exception as e:
-                    logger.opt(exception=e).error(f"Error processing file {fname}")
-                    res.append(ErrorMessage(type='error', data=Error(message=str(e), source_media=fname)))
-                    if not continue_on_error:
-                        return res
-                # finished fname, add progress
-                res.append(ProgressMessage(type='progress', data=Progress(source_media=fname)))
-
-            return res
-
-    return NewMessageProducer()
 
 def write_message(msg: Message, fout):
     if isinstance(msg, TagMessage):
@@ -64,7 +42,7 @@ def start_tag_loop(
     if isinstance(model, VideoModel):
         file_tagger = get_file_tagger_from_video_model(model)
     elif isinstance(model, (FrameModel, BatchFrameModel)):
-        file_tagger = get_file_tagger_from_frame_model(model, fps)
+        file_tagger = get_file_tagger_from_frame_model(model, fps, allow_single_frame)
     else:
         raise ValueError("Model must be either VideoModel, FrameModel, or BatchFrameModel")
 
@@ -86,19 +64,14 @@ def start_tag_loop(
             file_queue.put(None)
     
     def process_batch(files):
-        """Process a batch of files using the provided function"""
-        valid_files = []
-        for f in files:
-            if os.path.exists(f):
-                valid_files.append(f)
-            else:
-                print(f"Warning: file {f} does not exist, skipping", file=sys.stderr)
-        if valid_files:
-            print(f"Processing batch of {len(valid_files)} files...", file=sys.stderr)
-            messages = producer.produce_messages(valid_files)
+        print(f"Processing batch of {len(files)} files...", file=sys.stderr)
+        try:
+            messages = producer.produce_messages(files)
             for msg in messages:
                 write_message(msg, sys.stdout)
-            print(f"Completed batch of {len(valid_files)} files", file=sys.stderr)
+        except Exception as e:
+            write_message(ErrorMessage(type="error", data=Error(message=str(e))), sys.stdout)
+        print(f"Completed batch of {len(files)} files", file=sys.stderr)
     
     reader_thread = threading.Thread(target=stdin_reader, daemon=True)
     reader_thread.start()

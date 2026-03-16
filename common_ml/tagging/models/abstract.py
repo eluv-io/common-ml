@@ -1,8 +1,9 @@
-from typing import List, Protocol, runtime_checkable
 
+
+from typing import List, Protocol, runtime_checkable
 import numpy as np
 
-from common_ml.tagging.tag_types import Tag, FrameTag
+from common_ml.tagging.models.tag_types import FrameTag, Tag
 
 @runtime_checkable
 class VideoModel(Protocol):

@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional, Dict, Protocol
 from dataclasses import dataclass
 
-from common_ml.tagging.tag_types import Tag
+from common_ml.tagging.models.tag_types import Tag
 
 class Message: ...
 
