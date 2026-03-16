@@ -12,6 +12,7 @@ class Progress:
 @dataclass
 class Error:
     message: str
+    source_media: Optional[str] = None
 
 @dataclass
 class TagMessage(Message):
