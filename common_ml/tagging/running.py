@@ -261,6 +261,7 @@ def start_tag_loop(
         except (EOFError, KeyboardInterrupt):
             pass
         finally:
+            print("Stopping stdin reader", file=sys.stderr)
             file_queue.put(None)
     
     def process_batch(files):
