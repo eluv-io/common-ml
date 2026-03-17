@@ -13,6 +13,9 @@ from common_ml.tagging.file_tagger_adapt import *
 from common_ml.tagging.producer_adapt import *
 from common_ml.tagging.messages import *
 
+class AbortTaggingException(Exception):
+    pass
+
 def write_message(msg: Message, fout):
     if isinstance(msg, TagMessage):
         fout.writeline({"type": "tag", "data": msg.data})
@@ -24,6 +27,7 @@ def write_message(msg: Message, fout):
 def start_tag_loop(
     model: Union[VideoModel, FrameModel, BatchFrameModel],
     output_path: str,
+    continue_on_error: bool=False,
     batch_timeout: float=0.2,
     fps: float=1,
     allow_single_frame: bool=True,
@@ -63,20 +67,27 @@ def start_tag_loop(
             print("Stopping stdin reader", file=sys.stderr)
             file_queue.put(None)
     
-    def process_batch(files):
+    def process_batch(files, fd):
         print(f"Processing batch of {len(files)} files...", file=sys.stderr)
         try:
             messages = producer.produce_messages(files)
             for msg in messages:
-                write_message(msg, sys.stdout)
+                write_message(msg, fd)
+                if isinstance(msg, ErrorMessage) and not continue_on_error:
+                    raise AbortTaggingException("Received an error response from the producer")
+        except AbortTaggingException:
+            raise
         except Exception as e:
-            write_message(ErrorMessage(type="error", data=Error(message=str(e))), sys.stdout)
+            write_message(ErrorMessage(type="error", data=Error(message=str(e))), fd)
+            raise
         print(f"Completed batch of {len(files)} files", file=sys.stderr)
     
     reader_thread = threading.Thread(target=stdin_reader, daemon=True)
     reader_thread.start()
     
     current_batch = []
+
+    fdout = open(output_path, 'a')
     
     while True:
         try:
@@ -84,17 +95,19 @@ def start_tag_loop(
                 try:
                     file_path = file_queue.get_nowait()
                     
+                    # last batch
                     if file_path is None:
                         if current_batch:
-                            process_batch(current_batch)
+                            process_batch(current_batch, fdout)
                         return
                     
+                    # add to current batch to process
                     current_batch.append(file_path)
                 except:
                     break
             
             if current_batch:
-                process_batch(current_batch)
+                process_batch(current_batch, fdout)
                 current_batch = []
             
             if not reader_thread.is_alive() and file_queue.empty():
@@ -102,11 +115,14 @@ def start_tag_loop(
             
             time.sleep(batch_timeout)
                 
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             break
+
+    fdout.close()
 
 def serve_model(
     model: Union[VideoModel, FrameModel, BatchFrameModel],
+    continue_on_error: bool=False,
     batch_timeout: float=0.2,
     fps: float=1,
     allow_single_frame: bool=True,
@@ -115,4 +131,4 @@ def serve_model(
     parser.add_argument('--output_path', required=True, help='Path to write output tags (.jsonl)')
     args = parser.parse_args()
 
-    start_tag_loop(model, output_path=args.output_path, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)
+    start_tag_loop(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)
