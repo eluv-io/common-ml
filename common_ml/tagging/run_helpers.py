@@ -1,6 +1,6 @@
 
 import argparse
-from typing import List, Union
+from typing import Union
 import json
 from queue import Queue
 from dataclasses import asdict
@@ -8,10 +8,10 @@ import threading
 import time
 import sys
 
-from common_ml.tagging.abstract import TagMessageProducer
+from common_ml.tagging.producer import TagMessageProducer
 from common_ml.tagging.models.abstract import *
-from common_ml.tagging.file_tagger_adapt import *
-from common_ml.tagging.producer_adapt import *
+from common_ml.tagging.file_tagger import *
+from common_ml.tagging.producer import *
 from common_ml.tagging.messages import *
 
 class AbortTaggingException(Exception):
@@ -34,7 +34,7 @@ def start_loop_from_av_model(
     continue_on_error: bool=False,
     batch_timeout: float=0.2,
 ) -> None:
-    producer = get_message_producer_from_model(model)
+    producer = TagMessageProducer.from_model(model, continue_on_error=continue_on_error)
     start_loop_from_producer(
         producer=producer,
         output_path=output_path,
@@ -50,7 +50,7 @@ def start_loop_from_frame_model(
     fps: float=1,
     allow_single_frame: bool=True,
 ) -> None:
-    producer = get_message_producer_from_model(model, fps=fps, allow_single_frame=allow_single_frame)
+    producer = TagMessageProducer.from_model(model, fps=fps, allow_single_frame=allow_single_frame, continue_on_error=continue_on_error)
     start_loop_from_producer(
         producer=producer,
         output_path=output_path,
@@ -93,7 +93,7 @@ def start_loop_from_producer(
     def process_batch(files, fd):
         print(f"Processing batch of {len(files)} files...", file=sys.stderr)
         try:
-            messages = producer.produce_messages(files)
+            messages = producer.produce(files)
             for msg in messages:
                 write_message(msg, fd)
                 if isinstance(msg, ErrorMessage) and not continue_on_error:

@@ -3,15 +3,15 @@ import os
 from dacite import from_dict
 import multiprocessing
 
-from common_ml.tagging.running import *
+from common_ml.tagging.run_helpers import *
 from common_ml.tagging.messages import *
 from common_ml.tagging.models.abstract import AVModel, FrameModel, BatchFrameModel
 from common_ml.tagging.models.tag_types import Tag
-from common_ml.tagging.file_tagger_adapt import get_file_tagger_from_video_model, get_file_tagger_from_frame_model
+from common_ml.tagging.file_tagger import *
 
 
 def test_video_tag(video_model: AVModel, test_videos: List[str]):
-    file_tagger = get_file_tagger_from_video_model(video_model)
+    file_tagger = FileTagger.from_video_model(video_model)
 
     all_tags = []
     for fname in test_videos:
@@ -26,7 +26,7 @@ def test_video_tag(video_model: AVModel, test_videos: List[str]):
     assert all_tags[1].tag == "dialog"
 
 def test_frame_tag(frame_model: FrameModel, test_images: List[str]):
-    file_tagger = get_file_tagger_from_frame_model(frame_model, fps=1.0, allow_single_frame=True)
+    file_tagger = FileTagger.from_frame_model(frame_model, fps=1.0, allow_single_frame=True)
 
     all_tags = []
     for fname in test_images:
@@ -46,7 +46,7 @@ def test_frame_tag(frame_model: FrameModel, test_images: List[str]):
     assert all_tags[2].source_media == test_images[1]
 
 def test_frame_tag_videos(frame_model: FrameModel, test_videos: List[str]):
-    file_tagger = get_file_tagger_from_frame_model(frame_model, fps=1, allow_single_frame=True)
+    file_tagger = FileTagger.from_frame_model(frame_model, fps=1, allow_single_frame=True)
 
     all_tags = []
     for fname in test_videos:
@@ -68,7 +68,7 @@ def test_frame_tag_videos(frame_model: FrameModel, test_videos: List[str]):
         assert tag.end_time > tag.start_time
 
 def test_frame_tag_videos_single_false(frame_model: FrameModel, test_videos: List[str]):
-    file_tagger = get_file_tagger_from_frame_model(frame_model, fps=1, allow_single_frame=False)
+    file_tagger = FileTagger.from_frame_model(frame_model, fps=1, allow_single_frame=False)
 
     all_tags = []
     for fname in test_videos:

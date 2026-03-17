@@ -3,7 +3,7 @@ import sys
 import time
 import multiprocessing
 
-from common_ml.tagging.running import start_tag_loop
+from common_ml.tagging.run_helpers import start_loop_from_frame_model
 from common_ml.tagging.abstract import *
 from common_ml.tagging.models.abstract import *
 
@@ -13,7 +13,7 @@ def _run_tag_loop(model, output_path, read_fd, write_fd):
     os.close(write_fd)
     sys.stdin = os.fdopen(read_fd, 'r')
     try:
-        start_tag_loop(model, output_path)
+        start_loop_from_frame_model(model, output_path)
     except Exception as e:
         print(e)
 

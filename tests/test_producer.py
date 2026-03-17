@@ -2,15 +2,14 @@
 from typing import List
 
 from common_ml.tagging.messages import *
-from common_ml.tagging.abstract import FileTagger
-from common_ml.tagging.file_tagger_adapt import get_file_tagger_from_frame_model
+from common_ml.tagging.file_tagger import FileTagger
 from common_ml.tagging.models.abstract import FrameModel
-from common_ml.tagging.producer_adapt import *
+from common_ml.tagging.producer import *
 
 
 def test_message_producer(frame_model: FrameModel, test_videos: List[str], test_images: List[str]):
-    producer = get_message_producer_from_model(frame_model)
-    messages = producer.produce_messages(test_videos)
+    producer = TagMessageProducer.from_model(frame_model, fps=1.0, allow_single_frame=True)
+    messages = producer.produce(test_videos)
 
     status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
     assert len(status_messages) == 2
@@ -34,7 +33,7 @@ def test_message_producer(frame_model: FrameModel, test_videos: List[str], test_
     assert len(error_messages) == 0
 
     # test on images
-    messages = producer.produce_messages(test_images)
+    messages = producer.produce(test_images)
     status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
     tag_messages = [msg for msg in messages if isinstance(msg, TagMessage)]
 
@@ -48,7 +47,7 @@ def test_message_producer(frame_model: FrameModel, test_videos: List[str], test_
         assert msg.data.source_media in test_images
 
 def test_producer_error(frame_model: FrameModel, test_videos: List[str]):
-    file_tagger = get_file_tagger_from_frame_model(frame_model, fps=1, allow_single_frame=True)
+    file_tagger = FileTagger.from_frame_model(frame_model, fps=1, allow_single_frame=True)
     class ErrorTagger(FileTagger):
         def tag(self, file: str) -> List[Tag]:
             if file == test_videos[0]:
@@ -59,8 +58,8 @@ def test_producer_error(frame_model: FrameModel, test_videos: List[str]):
     new_tagger = ErrorTagger()
 
     # test with continue on error
-    producer = get_message_producer_from_file_tagger(new_tagger, continue_on_error=True)
-    messages = producer.produce_messages(test_videos)
+    producer = TagMessageProducer.from_file_tagger(new_tagger, continue_on_error=True)
+    messages = producer.produce(test_videos)
 
     status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
     assert len(status_messages) == 1
@@ -78,8 +77,8 @@ def test_producer_error(frame_model: FrameModel, test_videos: List[str]):
     assert error_messages[0].data.source_media == test_videos[0]
 
     # test without continue on error
-    producer = get_message_producer_from_file_tagger(new_tagger, continue_on_error=False)
-    messages = producer.produce_messages(test_videos)
+    producer = TagMessageProducer.from_file_tagger(new_tagger, continue_on_error=False)
+    messages = producer.produce(test_videos)
 
     status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
     tag_messages = [msg for msg in messages if isinstance(msg, TagMessage)]

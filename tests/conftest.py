@@ -4,7 +4,7 @@ import tempfile
 import pytest
 from common_ml.tagging.models.abstract import AVModel, FrameModel
 from common_ml.tagging.models.tag_types import *
-from common_ml.tagging.running import *
+from common_ml.tagging.run_helpers import *
 
 
 TEST_DATA = os.path.join(os.path.dirname(__file__), "test-data")
