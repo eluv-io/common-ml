@@ -2,14 +2,14 @@ import os
 import shutil
 import tempfile
 import pytest
-from common_ml.tagging.models.abstract import VideoModel, FrameModel
+from common_ml.tagging.models.abstract import AVModel, FrameModel
 from common_ml.tagging.models.tag_types import *
 from common_ml.tagging.running import *
 
 
 TEST_DATA = os.path.join(os.path.dirname(__file__), "test-data")
 
-class FakeVideoModel(VideoModel):
+class FakeAVModel(AVModel):
     def tag_video(self, fpath):
         return [
             Tag(tag="action", start_time=0, end_time=1000, source_media=fpath, track="", frame_info=None),
@@ -34,7 +34,7 @@ class FakeFrameModel(FrameModel):
 
 @pytest.fixture
 def video_model():
-    return FakeVideoModel()
+    return FakeAVModel()
 
 
 @pytest.fixture

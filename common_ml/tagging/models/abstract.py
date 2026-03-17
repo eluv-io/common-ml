@@ -6,7 +6,7 @@ import numpy as np
 from common_ml.tagging.models.tag_types import FrameTag, Tag
 
 @runtime_checkable
-class VideoModel(Protocol):
+class AVModel(Protocol):
     def tag_video(self, fpath: str) -> List[Tag]: ...
 
 @runtime_checkable

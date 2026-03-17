@@ -3,7 +3,7 @@ from typing import List, Protocol
 from common_ml.tagging.models.tag_types import Tag
 from common_ml.tagging.messages import Message
 
-class MessageProducer(Protocol):
+class TagMessageProducer(Protocol):
     def produce_messages(self, files: List[str]) -> List[Message]:
         ...
 

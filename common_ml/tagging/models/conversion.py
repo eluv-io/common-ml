@@ -4,7 +4,7 @@ from typing import Dict, List
 from dataclasses import dataclass
 import numpy as np
 
-from common_ml.tagging.models.abstract import BatchFrameModel, FrameModel, VideoModel
+from common_ml.tagging.models.abstract import BatchFrameModel, FrameModel, AVModel
 from common_ml.tagging.models.tag_types import FrameInfo, FrameTag, Tag
 from common_ml.video_processing import get_fps, get_frames
 
@@ -13,7 +13,7 @@ def get_video_model_from_frame_model(
     frame_model: BatchFrameModel, 
     fps: float, 
     allow_single_frame: bool
-) -> VideoModel:
+) -> AVModel:
     assert fps > 0
 
     @dataclass
@@ -22,7 +22,7 @@ def get_video_model_from_frame_model(
         pos: int
         tag: Tag
 
-    class NewModel(VideoModel):
+    class NewModel(AVModel):
         def tag_video(self, fpath: str) -> List[Tag]:
             key_frames, frame_indices, _ = get_frames(video_file=fpath, fps=fps)
             video_fps = get_fps(fpath)

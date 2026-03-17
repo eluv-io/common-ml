@@ -8,7 +8,7 @@ import threading
 import time
 import sys
 
-from common_ml.tagging.abstract import MessageProducer
+from common_ml.tagging.abstract import TagMessageProducer
 from common_ml.tagging.models.abstract import *
 from common_ml.tagging.file_tagger_adapt import *
 from common_ml.tagging.producer_adapt import *
@@ -29,7 +29,7 @@ def write_message(msg: Message, fout):
     fout.flush()
 
 def start_loop_from_av_model(
-    model: VideoModel, 
+    model: AVModel, 
     output_path: str,
     continue_on_error: bool=False,
     batch_timeout: float=0.2,
@@ -59,7 +59,7 @@ def start_loop_from_frame_model(
     )
 
 def start_loop_from_producer(
-    producer: MessageProducer,
+    producer: TagMessageProducer,
     output_path: str,
     continue_on_error: bool=False,
     batch_timeout: float=0.2
@@ -68,7 +68,7 @@ def start_loop_from_producer(
     Live mode: reads file paths from stdin and processes them in batches
     
     Args:
-        model: The model to use for tagging, can be VideoModel, FrameModel, or BatchFrameModel
+        model: The model to use for tagging, can be AVModel, FrameModel, or BatchFrameModel
         output_path: The file path to write the output tags (.jsonl format)
         batch_timeout: Timeout for batching files
         fps: Frames per second, only relevant or FrameModel or BatchFrameModel when processing videos
@@ -145,7 +145,7 @@ def start_loop_from_producer(
     fdout.close()
 
 def run_default(
-    model: Union[VideoModel, FrameModel, BatchFrameModel],
+    model: Union[AVModel, FrameModel, BatchFrameModel],
     continue_on_error: bool=False,
     batch_timeout: float=0.2,
     fps: float=1,
@@ -155,7 +155,7 @@ def run_default(
     parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
     args = parser.parse_args()
 
-    if isinstance(model, VideoModel):
+    if isinstance(model, AVModel):
         start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout)
     else:
         start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)

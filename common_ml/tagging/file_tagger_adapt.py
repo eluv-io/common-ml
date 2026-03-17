@@ -6,12 +6,12 @@ import numpy as np
 
 from common_ml.utils.files import get_file_type
 from common_ml.tagging.abstract import FileTagger
-from common_ml.tagging.models.abstract import BatchFrameModel, FrameModel, VideoModel
+from common_ml.tagging.models.abstract import BatchFrameModel, FrameModel, AVModel
 from common_ml.tagging.models.conversion import get_video_model_from_frame_model, batchify_frame_model
 from common_ml.tagging.models.tag_types import FrameInfo, FrameTag, Tag
 from common_ml.video_processing import get_fps, get_frames
 
-def get_file_tagger_from_video_model(video_model: VideoModel) -> FileTagger:
+def get_file_tagger_from_video_model(video_model: AVModel) -> FileTagger:
     class NewFileTagger(FileTagger):
         def tag(self, file: str) -> List[Tag]:
             return video_model.tag_video(file)

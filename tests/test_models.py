@@ -5,12 +5,12 @@ import multiprocessing
 
 from common_ml.tagging.running import *
 from common_ml.tagging.messages import *
-from common_ml.tagging.models.abstract import VideoModel, FrameModel, BatchFrameModel
+from common_ml.tagging.models.abstract import AVModel, FrameModel, BatchFrameModel
 from common_ml.tagging.models.tag_types import Tag
 from common_ml.tagging.file_tagger_adapt import get_file_tagger_from_video_model, get_file_tagger_from_frame_model
 
 
-def test_video_tag(video_model: VideoModel, test_videos: List[str]):
+def test_video_tag(video_model: AVModel, test_videos: List[str]):
     file_tagger = get_file_tagger_from_video_model(video_model)
 
     all_tags = []
