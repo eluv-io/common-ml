@@ -1,8 +1,9 @@
 
 import argparse
 from typing import List, Union
-import os
+import json
 from queue import Queue
+from dataclasses import asdict
 import threading
 import time
 import sys
@@ -18,14 +19,35 @@ class AbortTaggingException(Exception):
 
 def write_message(msg: Message, fout):
     if isinstance(msg, TagMessage):
-        fout.writeline({"type": "tag", "data": msg.data})
+        fout.write(json.dumps({"type": msg.type, "data": asdict(msg.data)}) + "\n")
     elif isinstance(msg, ProgressMessage):
-        fout.writeline({"type": "progress", "data": msg.data})
+        fout.write(json.dumps({"type": msg.type, "data": asdict(msg.data)}) + "\n")
     elif isinstance(msg, ErrorMessage):
-        fout.writeline({"type": "error", "data": msg.data})
+        fout.write(json.dumps({"type": msg.type, "data": asdict(msg.data)}) + "\n")
+    else:
+        raise ValueError(f"Unnexpected message type: {msg}")
+    fout.flush()
 
 def start_tag_loop(
     model: Union[VideoModel, FrameModel, BatchFrameModel],
+    output_path: str,
+    continue_on_error: bool=False,
+    batch_timeout: float=0.2,
+    fps: float=1,
+    allow_single_frame: bool=True,
+):
+    producer = get_message_producer_from_model(model)
+    start_loop_from_producer(
+        producer=producer,
+        output_path=output_path,
+        continue_on_error=continue_on_error,
+        batch_timeout=batch_timeout,
+        fps=fps,
+        allow_single_frame=allow_single_frame
+    )
+
+def start_loop_from_producer(
+    producer: MessageProducer,
     output_path: str,
     continue_on_error: bool=False,
     batch_timeout: float=0.2,
@@ -42,15 +64,6 @@ def start_tag_loop(
         fps: Frames per second, only relevant or FrameModel or BatchFrameModel when processing videos
         allow_single_frame: Whether to allow processing of single-frame videos, only relevant for FrameModel or BatchFrameModel
     """
-
-    if isinstance(model, VideoModel):
-        file_tagger = get_file_tagger_from_video_model(model)
-    elif isinstance(model, (FrameModel, BatchFrameModel)):
-        file_tagger = get_file_tagger_from_frame_model(model, fps, allow_single_frame)
-    else:
-        raise ValueError("Model must be either VideoModel, FrameModel, or BatchFrameModel")
-
-    producer = get_message_producer_from_file_tagger(file_tagger)
     
     file_queue = Queue()
     
@@ -99,6 +112,7 @@ def start_tag_loop(
                     if file_path is None:
                         if current_batch:
                             process_batch(current_batch, fdout)
+                        fdout.close()
                         return
                     
                     # add to current batch to process
@@ -114,7 +128,6 @@ def start_tag_loop(
                 break
             
             time.sleep(batch_timeout)
-                
         except (KeyboardInterrupt, SystemExit):
             break
 

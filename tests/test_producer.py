@@ -5,12 +5,11 @@ from common_ml.tagging.messages import *
 from common_ml.tagging.abstract import FileTagger
 from common_ml.tagging.file_tagger_adapt import get_file_tagger_from_frame_model
 from common_ml.tagging.models.abstract import FrameModel
-from common_ml.tagging.producer_adapt import get_message_producer_from_file_tagger
+from common_ml.tagging.producer_adapt import *
 
 
 def test_message_producer(frame_model: FrameModel, test_videos: List[str], test_images: List[str]):
-    file_tagger = get_file_tagger_from_frame_model(frame_model, fps=1, allow_single_frame=True)
-    producer = get_message_producer_from_file_tagger(file_tagger, continue_on_error=True)
+    producer = get_message_producer_from_model(frame_model)
     messages = producer.produce_messages(test_videos)
 
     status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
