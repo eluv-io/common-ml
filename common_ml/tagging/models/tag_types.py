@@ -7,7 +7,7 @@ class FrameInfo:
     frame_idx: int
     box: Dict[str, float]
 
-@dataclass
+@dataclass(frozen=True)
 class FrameTag:
     tag: str
     box: Dict[str, float]

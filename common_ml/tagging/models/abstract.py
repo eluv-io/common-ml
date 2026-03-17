@@ -8,7 +8,7 @@ from common_ml.tagging.models.tag_types import FrameTag, Tag
 @runtime_checkable
 class VideoModel(Protocol):
     def tag_video(self, fpath: str) -> List[Tag]: ...
-    
+
 @runtime_checkable
 class FrameModel(Protocol):
     def tag_frame(self, img: np.ndarray) -> List[FrameTag]: ...  # img: (H, W, 3)

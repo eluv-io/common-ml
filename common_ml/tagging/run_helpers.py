@@ -28,31 +28,41 @@ def write_message(msg: Message, fout):
         raise ValueError(f"Unnexpected message type: {msg}")
     fout.flush()
 
-def start_loop_from_model(
-    model: Union[VideoModel, FrameModel, BatchFrameModel],
+def start_loop_from_av_model(
+    model: VideoModel, 
     output_path: str,
     continue_on_error: bool=False,
     batch_timeout: float=0.2,
-    fps: float=1,
-    allow_single_frame: bool=True,
-):
+) -> None:
     producer = get_message_producer_from_model(model)
     start_loop_from_producer(
         producer=producer,
         output_path=output_path,
         continue_on_error=continue_on_error,
         batch_timeout=batch_timeout,
-        fps=fps,
-        allow_single_frame=allow_single_frame
+    )
+
+def start_loop_from_frame_model(
+    model: Union[FrameModel, BatchFrameModel],
+    output_path: str,
+    continue_on_error: bool=False,
+    batch_timeout: float=0.2,
+    fps: float=1,
+    allow_single_frame: bool=True,
+) -> None:
+    producer = get_message_producer_from_model(model, fps=fps, allow_single_frame=allow_single_frame)
+    start_loop_from_producer(
+        producer=producer,
+        output_path=output_path,
+        continue_on_error=continue_on_error,
+        batch_timeout=batch_timeout,
     )
 
 def start_loop_from_producer(
     producer: MessageProducer,
     output_path: str,
     continue_on_error: bool=False,
-    batch_timeout: float=0.2,
-    fps: float=1,
-    allow_single_frame: bool=True,
+    batch_timeout: float=0.2
 ) -> None:
     """
     Live mode: reads file paths from stdin and processes them in batches
@@ -145,4 +155,7 @@ def run_default(
     parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
     args = parser.parse_args()
 
-    start_tag_loop(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)
+    if isinstance(model, VideoModel):
+        start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout)
+    else:
+        start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)
