@@ -97,14 +97,16 @@ def start_loop_from_producer(
             messages = producer.produce(files)
             for msg in messages:
                 write_message(msg, fd)
-                if isinstance(msg, ErrorMessage) and not continue_on_error:
+                if isinstance(msg, ErrorMessage):
                     raise AbortTaggingException("Received an error response from the producer")
         except AbortTaggingException:
-            raise
+            if not continue_on_error:
+                # we already wrote the error
+                raise
         except Exception as e:
-            # also respect continue on error
             write_message(ErrorMessage(type="error", data=Error(message=str(e))), fd)
-            raise
+            if not continue_on_error:
+                raise
         print(f"Completed batch of {len(files)} files", file=sys.stderr)
     
     reader_thread = threading.Thread(target=stdin_reader, daemon=True)
