@@ -1,12 +1,9 @@
 
-import os
-from dacite import from_dict
-import multiprocessing
 
 from common_ml.tagging.run_helpers import *
 from common_ml.tagging.messages import *
-from common_ml.tagging.models.abstract import AVModel, FrameModel, BatchFrameModel
-from common_ml.tagging.models.tag_types import Tag
+from common_ml.tagging.models.av import AVModel
+from common_ml.tagging.models.frame_based import FrameModel
 from common_ml.tagging.file_tagger import *
 
 

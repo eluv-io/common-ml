@@ -5,7 +5,8 @@ from loguru import logger
 from typing import Union
 
 from common_ml.tagging.messages import *
-from common_ml.tagging.models.abstract import *
+from common_ml.tagging.models.frame_based import *
+from common_ml.tagging.models.av import AVModel
 from common_ml.tagging.file_tagger import FileTagger
 
 class TagMessageProducer(ABC):

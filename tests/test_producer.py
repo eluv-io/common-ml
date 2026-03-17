@@ -3,7 +3,7 @@ from typing import List
 
 from common_ml.tagging.messages import *
 from common_ml.tagging.file_tagger import FileTagger
-from common_ml.tagging.models.abstract import FrameModel
+from common_ml.tagging.models.frame_based import FrameModel
 from common_ml.tagging.producer import *
 
 

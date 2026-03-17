@@ -2,7 +2,8 @@ import os
 import shutil
 import tempfile
 import pytest
-from common_ml.tagging.models.abstract import AVModel, FrameModel
+from common_ml.tagging.models.av import AVModel
+from common_ml.tagging.models.frame_based import *
 from common_ml.tagging.models.tag_types import *
 from common_ml.tagging.run_helpers import *
 
@@ -44,7 +45,7 @@ def frame_model():
 
 @pytest.fixture
 def batch_frame_model(frame_model):
-    return batchify_frame_model(frame_model)
+    return BatchFrameModel.from_frame_model(frame_model)
 
 @pytest.fixture
 def test_videos():

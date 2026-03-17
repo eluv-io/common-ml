@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 
 from common_ml.utils.files import get_file_type
-from common_ml.tagging.models.abstract import BatchFrameModel, FrameModel, AVModel
-from common_ml.tagging.models.conversion import get_video_model_from_frame_model, batchify_frame_model
+from common_ml.tagging.models.frame_based import FrameModel, BatchFrameModel
+from common_ml.tagging.models.av import AVModel
 from common_ml.tagging.models.tag_types import FrameInfo, Tag
 
 class FileTagger(ABC):
@@ -28,11 +28,11 @@ class FileTagger(ABC):
         allow_single_frame: bool=False
     ) -> 'FileTagger':
         if isinstance(frame_model, FrameModel):
-            batched_frame_model = batchify_frame_model(frame_model)
+            batched_frame_model = BatchFrameModel.from_frame_model(frame_model)
         else:
             batched_frame_model = frame_model
 
-        video_model = get_video_model_from_frame_model(batched_frame_model, fps, allow_single_frame=allow_single_frame)
+        video_model = AVModel.from_frame_model(batched_frame_model, fps, allow_single_frame)
 
         class NewFileTagger(FileTagger):
             def tag(self, file: str) -> List[Tag]:

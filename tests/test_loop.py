@@ -4,8 +4,7 @@ import time
 import multiprocessing
 
 from common_ml.tagging.run_helpers import start_loop_from_frame_model
-from common_ml.tagging.abstract import *
-from common_ml.tagging.models.abstract import *
+from common_ml.tagging.models.frame_based import *
 
 def _run_tag_loop(model, output_path, read_fd, write_fd):
     # clever claude fix for the test not terminating, we need the ref count for the FD to hit 0 to trigger EOF

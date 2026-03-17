@@ -9,7 +9,8 @@ import time
 import sys
 
 from common_ml.tagging.producer import TagMessageProducer
-from common_ml.tagging.models.abstract import *
+from common_ml.tagging.models.frame_based import FrameModel, BatchFrameModel
+from common_ml.tagging.models.av import AVModel
 from common_ml.tagging.file_tagger import *
 from common_ml.tagging.producer import *
 from common_ml.tagging.messages import *
