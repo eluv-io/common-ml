@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'ffmpeg-python==0.2.0',
-        'dacite'
+        'dacite',
         'numpy',
         'ujson',
         'loguru',
