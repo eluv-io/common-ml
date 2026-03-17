@@ -34,6 +34,7 @@ def start_loop_from_av_model(
     output_path: str,
     continue_on_error: bool=False,
     batch_timeout: float=0.2,
+    batch_limit: Optional[int]=None,
 ) -> None:
     producer = TagMessageProducer.from_model(model, continue_on_error=continue_on_error)
     start_loop_from_producer(
@@ -41,6 +42,7 @@ def start_loop_from_av_model(
         output_path=output_path,
         continue_on_error=continue_on_error,
         batch_timeout=batch_timeout,
+        batch_limit=batch_limit,
     )
 
 def start_loop_from_frame_model(
@@ -50,6 +52,7 @@ def start_loop_from_frame_model(
     batch_timeout: float=0.2,
     fps: float=1,
     allow_single_frame: bool=True,
+    batch_limit: Optional[int]=None,
 ) -> None:
     producer = TagMessageProducer.from_model(model, fps=fps, allow_single_frame=allow_single_frame, continue_on_error=continue_on_error)
     start_loop_from_producer(
@@ -57,13 +60,15 @@ def start_loop_from_frame_model(
         output_path=output_path,
         continue_on_error=continue_on_error,
         batch_timeout=batch_timeout,
+        batch_limit=batch_limit,
     )
 
 def start_loop_from_producer(
     producer: TagMessageProducer,
     output_path: str,
     continue_on_error: bool=False,
-    batch_timeout: float=0.2
+    batch_timeout: float=0.2,
+    batch_limit: Optional[int]=None,
 ) -> None:
     """
     Live mode: reads file paths from stdin and processes them in batches
@@ -119,20 +124,20 @@ def start_loop_from_producer(
     while True:
         try:
             while not file_queue.empty():
-                try:
-                    file_path = file_queue.get_nowait()
-                    
-                    # last batch
-                    if file_path is None:
-                        if current_batch:
-                            process_batch(current_batch, fdout)
-                        fdout.close()
-                        return
-                    
-                    # add to current batch to process
-                    current_batch.append(file_path)
-                except:
-                    break
+                file_path = file_queue.get_nowait()
+                
+                # last batch
+                if file_path is None:
+                    if current_batch:
+                        process_batch(current_batch, fdout)
+                    fdout.close()
+                    return
+                
+                # add to current batch to process
+                current_batch.append(file_path)
+                if batch_limit is not None and len(current_batch) >= batch_limit:
+                    process_batch(current_batch, fdout)
+                    current_batch = []
             
             if current_batch:
                 process_batch(current_batch, fdout)
@@ -144,6 +149,10 @@ def start_loop_from_producer(
             time.sleep(batch_timeout)
         except (KeyboardInterrupt, SystemExit):
             break
+        except Exception as e:
+            print(f"Error in main loop: {e}", file=sys.stderr)
+            fdout.close()
+            break
 
     fdout.close()
 
@@ -153,12 +162,13 @@ def run_default(
     batch_timeout: float=0.2,
     fps: float=1,
     allow_single_frame: bool=True,
+    batch_limit: Optional[int]=None,
 ):
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
     args = parser.parse_args()
 
     if isinstance(model, AVModel):
-        start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout)
+        start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
     else:
-        start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)
+        start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame, batch_limit=batch_limit)
