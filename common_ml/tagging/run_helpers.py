@@ -28,7 +28,7 @@ def write_message(msg: Message, fout):
         raise ValueError(f"Unnexpected message type: {msg}")
     fout.flush()
 
-def start_tag_loop(
+def start_loop_from_model(
     model: Union[VideoModel, FrameModel, BatchFrameModel],
     output_path: str,
     continue_on_error: bool=False,
@@ -91,6 +91,7 @@ def start_loop_from_producer(
         except AbortTaggingException:
             raise
         except Exception as e:
+            # also respect continue on error
             write_message(ErrorMessage(type="error", data=Error(message=str(e))), fd)
             raise
         print(f"Completed batch of {len(files)} files", file=sys.stderr)
@@ -133,7 +134,7 @@ def start_loop_from_producer(
 
     fdout.close()
 
-def serve_model(
+def run_default(
     model: Union[VideoModel, FrameModel, BatchFrameModel],
     continue_on_error: bool=False,
     batch_timeout: float=0.2,
@@ -141,7 +142,7 @@ def serve_model(
     allow_single_frame: bool=True,
 ):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_path', required=True, help='Path to write output tags (.jsonl)')
+    parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
     args = parser.parse_args()
 
     start_tag_loop(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame)
