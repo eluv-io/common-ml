@@ -46,7 +46,7 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         write_pipe.write("\n".join(test_images) + "\n")
         write_pipe.flush()
 
-        time.sleep(1)
+        time.sleep(2)
 
         with open(output_path, "r") as f:
             lines = f.readlines()
