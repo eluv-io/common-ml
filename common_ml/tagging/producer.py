@@ -1,7 +1,6 @@
     
 from abc import ABC, abstractmethod
 
-from loguru import logger
 from typing import Union
 
 from common_ml.tagging.messages import *
@@ -15,21 +14,13 @@ class TagMessageProducer(ABC):
         pass
 
     @staticmethod
-    def from_file_tagger(file_tagger: FileTagger, continue_on_error: bool = False) -> 'TagMessageProducer':
+    def from_file_tagger(file_tagger: FileTagger) -> 'TagMessageProducer':
         class NewTagMessageProducer(TagMessageProducer):
             def produce(self, files: List[str]) -> List[Message]:
                 res = []
 
                 for fname in files:
-                    try:
-                        tags = file_tagger.tag(fname)
-                    except Exception as e:
-                        logger.opt(exception=e).error(f"Error processing file {fname}")
-                        res.append(ErrorMessage(type='error', data=Error(message=str(e), source_media=fname)))
-                        if not continue_on_error:
-                            return res
-                        else:
-                            continue
+                    tags = file_tagger.tag(fname)
 
                     for tag in tags:
                         res.append(TagMessage(type="tag", data=tag))
@@ -55,4 +46,4 @@ class TagMessageProducer(ABC):
         else:
             raise ValueError("Model must be either AVModel, FrameModel, or BatchFrameModel")
 
-        return TagMessageProducer.from_file_tagger(file_tagger, continue_on_error)
+        return TagMessageProducer.from_file_tagger(file_tagger)

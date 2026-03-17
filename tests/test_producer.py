@@ -1,6 +1,8 @@
 
 from typing import List
 
+import pytest
+
 from common_ml.tagging.messages import *
 from common_ml.tagging.file_tagger import FileTagger
 from common_ml.tagging.models.frame_based import FrameModel
@@ -50,40 +52,14 @@ def test_producer_error(frame_model: FrameModel, test_videos: List[str]):
     file_tagger = FileTagger.from_frame_model(frame_model, fps=1, allow_single_frame=True)
     class ErrorTagger(FileTagger):
         def tag(self, file: str) -> List[Tag]:
-            if file == test_videos[0]:
+            if file == test_videos[1]:
                 raise RuntimeError("i'm panicking")
             else:
                 return file_tagger.tag(file)
             
     new_tagger = ErrorTagger()
 
-    # test with continue on error
-    producer = TagMessageProducer.from_file_tagger(new_tagger, continue_on_error=True)
-    messages = producer.produce(test_videos)
-
-    status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
-    assert len(status_messages) == 1
-    assert status_messages[0].data.source_media == test_videos[1]
-
-    tag_messages = [msg for msg in messages if isinstance(msg, TagMessage)]
-    assert len(tag_messages) > 0
-    for msg in tag_messages:
-        # make sure we don't get anything from the errored file
-        assert msg.data.source_media == test_videos[1]
-
-    error_messages = [msg for msg in messages if isinstance(msg, ErrorMessage)]
-    assert len(error_messages) == 1
-    assert error_messages[0].type == "error"
-    assert error_messages[0].data.source_media == test_videos[0]
-
-    # test without continue on error
-    producer = TagMessageProducer.from_file_tagger(new_tagger, continue_on_error=False)
-    messages = producer.produce(test_videos)
-
-    status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
-    tag_messages = [msg for msg in messages if isinstance(msg, TagMessage)]
-    error_messages = [msg for msg in messages if isinstance(msg, ErrorMessage)]
-
-    assert len(status_messages) == len(tag_messages) == 0
-
-    assert len(error_messages) == 1
+    producer = TagMessageProducer.from_file_tagger(new_tagger)
+    with pytest.raises(Exception):
+        # it should error the whole thing
+        producer.produce(test_videos)
