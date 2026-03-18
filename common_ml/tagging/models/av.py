@@ -86,12 +86,8 @@ class AVModel(ABC):
 
                 return result
 
-            @lru_cache(maxsize=1024)
-            def _cached_fps(self, source_media: str):
-                return get_fps(source_media)
-
             def _frame_tag_to_video_tag(self, frame_tag: FrameTag, frame_idx: int, source_media: str) -> Tag:
-                ts = self._to_milliseconds(frame_idx / self._cached_fps(source_media))
+                ts = self._to_milliseconds(frame_idx / get_fps(source_media))
                 return Tag(
                     tag=frame_tag.tag,
                     start_time=ts,
