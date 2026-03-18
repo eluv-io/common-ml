@@ -11,7 +11,7 @@ from common_ml.tagging.run_helpers import *
 TEST_DATA = os.path.join(os.path.dirname(__file__), "test-data")
 
 class FakeAVModel(AVModel):
-    def tag_video(self, fpath):
+    def tag(self, fpath):
         return [
             Tag(tag="action", start_time=0, end_time=1000, source_media=fpath, track="", frame_info=None),
             Tag(tag="dialog", start_time=1000, end_time=2000, source_media=fpath, track="", frame_info=None),
