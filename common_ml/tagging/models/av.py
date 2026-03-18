@@ -1,0 +1,103 @@
+from dataclasses import dataclass
+from functools import lru_cache
+from typing import Dict, List
+from abc import ABC, abstractmethod
+
+from common_ml.tagging.models.tag_types import FrameInfo, FrameTag, Tag
+from common_ml.tagging.models.frame_based import BatchFrameModel
+from common_ml.video_processing import get_frames, get_fps
+
+class AVModel(ABC):
+    @abstractmethod
+    def tag_video(self, fpath: str) -> List[Tag]:
+        pass
+
+    @staticmethod
+    def from_frame_model(
+        frame_model: BatchFrameModel,
+        fps: float,
+        allow_single_frame: bool,
+    ) -> 'AVModel':
+        assert fps > 0
+
+        @dataclass
+        class TagWithPos:
+            pos: int
+            tag: Tag
+
+        class NewModel(AVModel):
+            def tag_video(self, fpath: str) -> List[Tag]:
+                key_frames, frame_indices, _ = get_frames(video_file=fpath, fps=fps)
+                video_fps = get_fps(fpath)
+                tagged_w_pos: List[TagWithPos] = []
+                ftag_by_img = frame_model.tag_frames(key_frames)
+                for pos, (fidx, ftags) in enumerate(zip(frame_indices, ftag_by_img)):
+                    for t in ftags:
+                        converted_tag = self._frame_tag_to_video_tag(t, fidx, fpath)
+                        tagged_w_pos.append(TagWithPos(pos=pos, tag=converted_tag))
+
+                combined_tags = self._combine_adjacent(tagged_w_pos, allow_single_frame, video_fps)
+                frame_level_tags = [t.tag for t in tagged_w_pos]
+                return frame_level_tags + combined_tags
+
+            def _combine_adjacent(self, tags: List[TagWithPos], allow_single_frame: bool, fps: float) -> List[Tag]:
+                if len(tags) == 0:
+                    return []
+
+                frame_time = self._to_milliseconds(1 / fps)
+
+                tag_to_items: Dict[str, List[TagWithPos]] = {}
+                for twp in tags:
+                    text = twp.tag.tag
+                    if text not in tag_to_items:
+                        tag_to_items[text] = []
+                    tag_to_items[text].append(twp)
+
+                result = []
+                for text, items in tag_to_items.items():
+                    sorted_items = sorted(items, key=lambda x: x.pos)
+                    left = sorted_items[0]
+                    right = sorted_items[0]
+                    for item in sorted_items[1:]:
+                        if item.pos == right.pos + 1:
+                            right = item
+                        else:
+                            if allow_single_frame or right.pos > left.pos:
+                                result.append(Tag(
+                                    tag=text,
+                                    start_time=left.tag.start_time,
+                                    end_time=right.tag.end_time + frame_time,
+                                    source_media=left.tag.source_media,
+                                    track=left.tag.track,
+                                    frame_info=None,
+                                ))
+                            left = item
+                            right = item
+
+                    if allow_single_frame or right.pos > left.pos:
+                        result.append(Tag(
+                            tag=text,
+                            start_time=left.tag.start_time,
+                            end_time=right.tag.end_time + frame_time,
+                            source_media=left.tag.source_media,
+                            track=left.tag.track,
+                            frame_info=None,
+                        ))
+
+                return result
+
+            def _frame_tag_to_video_tag(self, frame_tag: FrameTag, frame_idx: int, source_media: str) -> Tag:
+                ts = self._to_milliseconds(frame_idx / get_fps(source_media))
+                return Tag(
+                    tag=frame_tag.tag,
+                    start_time=ts,
+                    end_time=ts,
+                    source_media=source_media,
+                    track="",
+                    frame_info=FrameInfo(frame_idx=frame_idx, box=frame_tag.box),
+                )
+
+            def _to_milliseconds(self, seconds: float) -> int:
+                return round(seconds * 1000)
+
+        return NewModel()

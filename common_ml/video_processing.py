@@ -1,4 +1,6 @@
 
+from functools import lru_cache
+
 import numpy as np
 from typing import Tuple, List
 from fractions import Fraction
@@ -8,6 +10,7 @@ import os
 from loguru import logger
 import av
 
+@lru_cache(maxsize=2048)
 def get_fps(video_file: str) -> float:
     cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v",
             "-show_entries", "stream=r_frame_rate,avg_frame_rate",

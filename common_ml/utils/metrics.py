@@ -13,5 +13,4 @@ class timeit:
     def __exit__(self, *args):
         self.end = time.time()
         self.interval = self.end - self.start
-        logger.info(f'Finished {self.message}...')
-        logger.info(f"Elapsed time: {self.interval:.4f} seconds")
+        logger.info(f'Finished {self.message}... logger.info(f"Elapsed time: {self.interval:.4f} seconds")')
