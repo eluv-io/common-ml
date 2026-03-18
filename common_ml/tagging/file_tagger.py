@@ -17,7 +17,7 @@ class FileTagger(ABC):
     def from_video_model(video_model: AVModel) -> 'FileTagger':
         class NewFileTagger(FileTagger):
             def tag(self, file: str) -> List[Tag]:
-                return video_model.tag_video(file)
+                return video_model.tag(file)
     
         return NewFileTagger()
 
@@ -59,7 +59,7 @@ class FileTagger(ABC):
 
                     return tags
                 elif file_type == "video":
-                    return video_model.tag_video(file)
+                    return video_model.tag(file)
                 else:
                     raise ValueError(f"Unsupported file type for {file}.")
             

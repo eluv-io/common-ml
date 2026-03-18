@@ -18,5 +18,5 @@ class Tag:
     end_time: int
     tag: str
     source_media: str
-    track: str
-    frame_info: Optional[FrameInfo]
+    track: str = ""
+    frame_info: Optional[FrameInfo] = None

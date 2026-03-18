@@ -9,7 +9,7 @@ from common_ml.video_processing import get_frames, get_fps
 
 class AVModel(ABC):
     @abstractmethod
-    def tag_video(self, fpath: str) -> List[Tag]:
+    def tag(self, fpath: str) -> List[Tag]:
         pass
 
     @staticmethod
@@ -26,7 +26,7 @@ class AVModel(ABC):
             tag: Tag
 
         class NewModel(AVModel):
-            def tag_video(self, fpath: str) -> List[Tag]:
+            def tag(self, fpath: str) -> List[Tag]:
                 key_frames, frame_indices, _ = get_frames(video_file=fpath, fps=fps)
                 video_fps = get_fps(fpath)
                 tagged_w_pos: List[TagWithPos] = []
