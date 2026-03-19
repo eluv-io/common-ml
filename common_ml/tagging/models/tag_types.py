@@ -19,4 +19,5 @@ class Tag:
     tag: str
     source_media: str
     track: str = ""
+    additional_info: Optional[Dict] = None
     frame_info: Optional[FrameInfo] = None

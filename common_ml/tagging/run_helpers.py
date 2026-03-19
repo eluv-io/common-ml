@@ -98,6 +98,8 @@ def start_loop_from_producer(
     
     def process_batch(files, fd):
         print(f"Processing batch of {len(files)} files...", file=sys.stderr)
+        for fname in files:
+            print(f"Got {fname}")
         try:
             messages = producer.produce(files)
             for msg in messages:
