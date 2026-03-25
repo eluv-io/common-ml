@@ -1,7 +1,7 @@
 
 import argparse
 import traceback
-from typing import Union
+from typing import Union, Any
 import json
 from queue import Queue
 from dataclasses import asdict
@@ -187,3 +187,13 @@ def catch_errors():
         with open(output_path, 'a') as fout:
             write_message(ErrorMessage(type="error", data=Error(message=f"{exc_type.__name__}: {exc_value}")), fout)
     sys.excepthook = handler
+
+def get_params() -> dict[str, Any]:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--params', type=str, required=False, help='Runtime parameters as JSON')
+    args, _ = parser.parse_known_args()
+    params_str = args.params
+    if not params_str:
+        return {}
+    config_dict = json.loads(params_str)
+    return config_dict
