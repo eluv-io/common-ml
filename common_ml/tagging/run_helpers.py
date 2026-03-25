@@ -1,5 +1,6 @@
 
 import argparse
+import traceback
 from typing import Union
 import json
 from queue import Queue
@@ -154,7 +155,7 @@ def start_loop_from_producer(
         except Exception as e:
             print(f"Error in main loop: {e}", file=sys.stderr)
             fdout.close()
-            break
+            return
 
     fdout.close()
 
@@ -174,3 +175,15 @@ def run_default(
         start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
     else:
         start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame, batch_limit=batch_limit)
+
+def catch_errors():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
+    args, _ = parser.parse_known_args()
+    output_path = args.output_path
+    def handler(exc_type, exc_value, exc_tb):
+        print("Caught unhandled exception:")
+        traceback.print_exception(exc_type, exc_value, exc_tb)
+        with open(output_path, 'a') as fout:
+            write_message(ErrorMessage(type="error", data=Error(message=f"{exc_type.__name__}: {exc_value}")), fout)
+    sys.excepthook = handler
