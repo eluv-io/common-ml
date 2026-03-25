@@ -1,7 +1,7 @@
     
 from abc import ABC, abstractmethod
 
-from typing import Union
+from typing import Union, Iterator
 
 from common_ml.tagging.messages import *
 from common_ml.tagging.models.frame_based import *
@@ -10,25 +10,23 @@ from common_ml.tagging.file_tagger import FileTagger
 
 class TagMessageProducer(ABC):
     @abstractmethod
-    def produce(self, files: List[str]) -> List[Message]:
+    def produce(self, files: List[str]) -> Iterator[Message]:
         pass
 
     @staticmethod
-    def from_file_tagger(file_tagger: FileTagger) -> 'TagMessageProducer':
+    def from_file_tagger(file_tagger: FileTagger) -> "TagMessageProducer":
         class NewTagMessageProducer(TagMessageProducer):
-            def produce(self, files: List[str]) -> List[Message]:
-                res = []
-
+            def produce(self, files: List[str]) -> Iterator[Message]:
                 for fname in files:
                     tags = file_tagger.tag(fname)
 
                     for tag in tags:
-                        res.append(TagMessage(type="tag", data=tag))
+                        yield TagMessage(type="tag", data=tag)
 
-                    # finished fname, add progress
-                    res.append(ProgressMessage(type='progress', data=Progress(source_media=fname)))
-
-                return res
+                    yield ProgressMessage(
+                        type="progress",
+                        data=Progress(source_media=fname),
+                    )
 
         return NewTagMessageProducer()
     

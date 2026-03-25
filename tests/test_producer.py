@@ -11,7 +11,7 @@ from common_ml.tagging.producer import *
 
 def test_message_producer(frame_model: FrameModel, test_videos: List[str], test_images: List[str]):
     producer = TagMessageProducer.from_model(frame_model, fps=1.0, allow_single_frame=True)
-    messages = producer.produce(test_videos)
+    messages = list(producer.produce(test_videos))
 
     status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
     assert len(status_messages) == 2
@@ -35,7 +35,7 @@ def test_message_producer(frame_model: FrameModel, test_videos: List[str], test_
     assert len(error_messages) == 0
 
     # test on images
-    messages = producer.produce(test_images)
+    messages = list(producer.produce(test_images))
     status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
     tag_messages = [msg for msg in messages if isinstance(msg, TagMessage)]
 
@@ -62,4 +62,4 @@ def test_producer_error(frame_model: FrameModel, test_videos: List[str]):
     producer = TagMessageProducer.from_file_tagger(new_tagger)
     with pytest.raises(Exception):
         # it should error the whole thing
-        producer.produce(test_videos)
+        list(producer.produce(test_videos))

@@ -3,6 +3,7 @@ import shutil
 import sys
 import time
 import multiprocessing
+from typing import Iterator
 
 import pytest
 
@@ -157,10 +158,11 @@ def test_loop_with_error_message(frame_model: FrameModel, test_videos: List[str]
     producer = TagMessageProducer.from_model(frame_model)
 
     class ExceptionProducer(TagMessageProducer):
-        def produce(self, files: List[str]) -> List[Message]:
+        def produce(self, files: List[str]) -> Iterator[Message]:
             messages = producer.produce(files)
-            messages.append(ErrorMessage(type="error", data=Error(message="test error message", source_media=files[-1])))
-            return messages
+            yield from messages
+            yield ErrorMessage(type="error", data=Error(message="test error message", source_media=files[-1]))
+
 
     read_fd, write_fd = os.pipe()
     proc = multiprocessing.Process(target=_run_producer_loop, args=(ExceptionProducer(), output_path, read_fd, write_fd, False, None))
