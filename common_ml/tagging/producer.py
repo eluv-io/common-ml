@@ -34,8 +34,7 @@ class TagMessageProducer(ABC):
     def from_model(
         model: Union[AVModel, FrameModel, BatchFrameModel], 
         fps: float=1.0, 
-        allow_single_frame: bool=False,
-        continue_on_error: bool=False
+        allow_single_frame: bool=True
     ) -> 'TagMessageProducer':
         if isinstance(model, AVModel):
             file_tagger = FileTagger.from_video_model(model)
