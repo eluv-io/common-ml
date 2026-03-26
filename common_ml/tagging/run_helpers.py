@@ -37,7 +37,7 @@ def start_loop_from_av_model(
     batch_timeout: float=0.2,
     batch_limit: Optional[int]=None,
 ) -> None:
-    producer = TagMessageProducer.from_model(model, continue_on_error=continue_on_error)
+    producer = TagMessageProducer.from_model(model)
     start_loop_from_producer(
         producer=producer,
         output_path=output_path,
@@ -55,7 +55,7 @@ def start_loop_from_frame_model(
     allow_single_frame: bool=True,
     batch_limit: Optional[int]=None,
 ) -> None:
-    producer = TagMessageProducer.from_model(model, fps=fps, allow_single_frame=allow_single_frame, continue_on_error=continue_on_error)
+    producer = TagMessageProducer.from_model(model, fps=fps, allow_single_frame=allow_single_frame)
     start_loop_from_producer(
         producer=producer,
         output_path=output_path,
