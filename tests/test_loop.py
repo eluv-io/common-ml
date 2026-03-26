@@ -1,14 +1,12 @@
 import os
-import shutil
 import sys
 import time
 import multiprocessing
 from typing import Iterator
-
-import pytest
+from unittest.mock import patch
 
 from common_ml.tagging.producer import TagMessageProducer
-from common_ml.tagging.run_helpers import start_loop_from_frame_model, start_loop_from_producer
+from common_ml.tagging.run_helpers import start_loop_from_frame_model, start_loop_from_producer, run_default
 from common_ml.tagging.models.frame_based import *
 from common_ml.tagging.messages import *
 
@@ -82,7 +80,7 @@ def test_loop_with_exception(frame_model: FrameModel, test_videos: List[str], te
     producer = TagMessageProducer.from_model(frame_model)
 
     class ExceptionProducer(TagMessageProducer):
-        def produce(self, files: List[str]) -> List[Message]:
+        def produce(self, files: List[str]) -> Iterator[Message]:
             if test_videos[-1] in files:
                 raise RuntimeError("test exception")
             return producer.produce(files)
@@ -188,3 +186,19 @@ def test_loop_with_error_message(frame_model: FrameModel, test_videos: List[str]
     finally:
         write_pipe.close()
         proc.join(timeout=5)
+
+def test_run_default(frame_model: FrameModel, test_videos: List[str]):
+    sys.argv = [
+        "prog",
+        "--params",
+        '{"fps":2, "allow_single_frame": false, "continue_on_error": true}',
+        "--output-path",
+        "custom.jsonl",
+    ]
+
+    with patch("common_ml.tagging.run_helpers.start_loop_from_frame_model") as mock:
+        run_default(frame_model)
+        args, kwargs = mock.call_args
+        assert kwargs["fps"] == 2
+        assert kwargs["allow_single_frame"] == False
+        assert kwargs["continue_on_error"] == True

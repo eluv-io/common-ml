@@ -169,7 +169,17 @@ def run_default(
 ):
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
-    args = parser.parse_args()
+    parser.add_argument('--params', required=False, help='Path to write output tags (.jsonl)')
+    args, _ = parser.parse_known_args()
+
+    params = {}
+    if args.params:
+        params = json.loads(args.params)
+
+    # support these params by default
+    fps = params.get("fps", 1)
+    allow_single_frame = params.get("allow_single_frame", True)
+    continue_on_error = params.get("continue_on_error", False)
 
     if isinstance(model, AVModel):
         start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
