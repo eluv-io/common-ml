@@ -9,6 +9,8 @@ import threading
 import time
 import sys
 
+from loguru import logger
+
 from common_ml.tagging.producer import TagMessageProducer
 from common_ml.tagging.models.frame_based import FrameModel, BatchFrameModel
 from common_ml.tagging.models.av import AVModel
@@ -153,7 +155,7 @@ def start_loop_from_producer(
         except (KeyboardInterrupt, SystemExit):
             break
         except Exception as e:
-            print(f"Error in main loop: {e}", file=sys.stderr)
+            logger.opt(exception=e).error("Error in main loop")
             fdout.close()
             return
 
