@@ -159,7 +159,7 @@ def test_loop_with_error_message(frame_model: FrameModel, test_videos: List[str]
         def produce(self, files: List[str]) -> Iterator[Message]:
             messages = producer.produce(files)
             yield from messages
-            yield ErrorMessage(type="error", data=Error(message="test error message", source_media=files[-1]))
+            yield Error(message="test error message", source_media=files[-1])
 
 
     read_fd, write_fd = os.pipe()
