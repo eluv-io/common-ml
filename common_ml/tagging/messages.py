@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Dict
+from typing import Optional, Dict
 from dataclasses import dataclass
 
 class Message: ...
@@ -18,26 +18,11 @@ class Tag(Message):
     additional_info: Optional[Dict] = None
     frame_info: Optional[FrameInfo] = None
 
-@dataclass
+@dataclass(frozen=True)
 class Progress(Message):
     source_media: str
 
-@dataclass
+@dataclass(frozen=True)
 class Error(Message):
     message: str
     source_media: Optional[str] = None
-
-@dataclass
-class TagMessage(Message):
-    type: Literal['tag']
-    data: Tag
-
-@dataclass
-class ProgressMessage(Message):
-    type: Literal['progress']
-    data: Progress
-
-@dataclass
-class ErrorMessage(Message):
-    type: Literal['error']
-    data: Error

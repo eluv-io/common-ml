@@ -21,12 +21,9 @@ class TagMessageProducer(ABC):
                     tags = file_tagger.tag(fname)
 
                     for tag in tags:
-                        yield TagMessage(type="tag", data=tag)
+                        yield tag
 
-                    yield ProgressMessage(
-                        type="progress",
-                        data=Progress(source_media=fname),
-                    )
+                    yield Progress(source_media=fname)
 
         return NewTagMessageProducer()
     

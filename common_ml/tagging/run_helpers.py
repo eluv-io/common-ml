@@ -22,12 +22,12 @@ class AbortTaggingException(Exception):
     pass
 
 def write_message(msg: Message, fout):
-    if isinstance(msg, TagMessage):
-        fout.write(json.dumps({"type": msg.type, "data": asdict(msg.data)}) + "\n")
-    elif isinstance(msg, ProgressMessage):
-        fout.write(json.dumps({"type": msg.type, "data": asdict(msg.data)}) + "\n")
-    elif isinstance(msg, ErrorMessage):
-        fout.write(json.dumps({"type": msg.type, "data": asdict(msg.data)}) + "\n")
+    if isinstance(msg, Tag):
+        fout.write(json.dumps({"type": "tag", "data": asdict(msg)}) + "\n")
+    elif isinstance(msg, Progress):
+        fout.write(json.dumps({"type": "progress", "data": asdict(msg)}) + "\n")
+    elif isinstance(msg, Error):
+        fout.write(json.dumps({"type": "error", "data": asdict(msg)}) + "\n")
     else:
         raise ValueError(f"Unnexpected message type: {msg}")
     fout.flush()
@@ -107,14 +107,14 @@ def start_loop_from_producer(
             messages = producer.produce(files)
             for msg in messages:
                 write_message(msg, fd)
-                if isinstance(msg, ErrorMessage):
+                if isinstance(msg, Error):
                     raise AbortTaggingException("Received an error response from the producer")
         except AbortTaggingException:
             if not continue_on_error:
                 # we already wrote the error
                 raise
         except Exception as e:
-            write_message(ErrorMessage(type="error", data=Error(message=str(e))), fd)
+            write_message(Error(message=str(e)), fd)
             if not continue_on_error:
                 raise
         print(f"Completed batch of {len(files)} files", file=sys.stderr)
@@ -197,7 +197,7 @@ def catch_errors():
         print("Caught unhandled exception:")
         traceback.print_exception(exc_type, exc_value, exc_tb)
         with open(output_path, 'a') as fout:
-            write_message(ErrorMessage(type="error", data=Error(message=f"{exc_type.__name__}: {exc_value}")), fout)
+            write_message(Error(message=f"{exc_type.__name__}: {exc_value}"), fout)
     sys.excepthook = handler
 
 def get_params() -> Dict[str, Any]:
