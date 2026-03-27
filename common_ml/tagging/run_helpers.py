@@ -57,7 +57,7 @@ def run_default(
 
     if isinstance(model, TagMessageProducer):
         start_loop_from_producer(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
-    if isinstance(model, AVModel):
+    elif isinstance(model, AVModel):
         start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
     elif isinstance(model, (FrameModel, BatchFrameModel)):
         start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame, batch_limit=batch_limit)
