@@ -13,40 +13,36 @@ def test_message_producer(frame_model: FrameModel, test_videos: List[str], test_
     producer = TagMessageProducer.from_model(frame_model, fps=1.0, allow_single_frame=True)
     messages = list(producer.produce(test_videos))
 
-    status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
+    status_messages = [msg for msg in messages if isinstance(msg, Progress)]
     assert len(status_messages) == 2
-    assert status_messages[0].type == "progress"
-    assert status_messages[0].data.source_media == test_videos[0]
-    assert status_messages[1].type == "progress"
-    assert status_messages[1].data.source_media == test_videos[1]
+    assert status_messages[0].source_media == test_videos[0]
+    assert status_messages[1].source_media == test_videos[1]
 
-    tag_messages = [msg for msg in messages if isinstance(msg, TagMessage)]
+    tag_messages = [msg for msg in messages if isinstance(msg, Tag)]
     assert len(tag_messages) > 0
     for msg in tag_messages:
-        assert msg.type == "tag"
-        if msg.data.frame_info:
-            assert msg.data.start_time == msg.data.end_time
+        if msg.frame_info:
+            assert msg.start_time == msg.end_time
         else:
-            assert msg.data.end_time > msg.data.start_time
-        assert msg.data.source_media in test_videos
-        assert msg.data.tag in ["a", "b"]
+            assert msg.end_time > msg.start_time
+        assert msg.source_media in test_videos
+        assert msg.tag in ["a", "b"]
 
-    error_messages = [msg for msg in messages if isinstance(msg, ErrorMessage)]
+    error_messages = [msg for msg in messages if isinstance(msg, Error)]
     assert len(error_messages) == 0
 
     # test on images
     messages = list(producer.produce(test_images))
-    status_messages = [msg for msg in messages if isinstance(msg, ProgressMessage)]
-    tag_messages = [msg for msg in messages if isinstance(msg, TagMessage)]
+    status_messages = [msg for msg in messages if isinstance(msg, Progress)]
+    tag_messages = [msg for msg in messages if isinstance(msg, Tag)]
 
     assert len(status_messages) == 2
     assert len(tag_messages) > 0
 
     for msg in tag_messages:
-        assert msg.type == "tag"
-        assert msg.data.start_time == msg.data.end_time
-        assert msg.data.frame_info
-        assert msg.data.source_media in test_images
+        assert msg.frame_info
+        assert msg.start_time == msg.end_time
+        assert msg.source_media in test_images
 
 def test_producer_error(frame_model: FrameModel, test_videos: List[str]):
     file_tagger = FileTagger.from_frame_model(frame_model, fps=1, allow_single_frame=True)
