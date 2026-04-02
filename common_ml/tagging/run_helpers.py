@@ -176,14 +176,21 @@ def start_loop_from_producer(
         finally:
             print("Stopping stdin reader", file=sys.stderr)
             file_queue.put(None)
-    
-    def process_batch(files, fd):
+
+    def process_batch(files: list[str], fd):
         print(f"Processing batch of {len(files)} files...", file=sys.stderr)
         for fname in files:
             print(f"Got {fname}")
+        write_messages(lambda: producer.produce(files), fd)
+        print(f"Completed batch of {len(files)} files", file=sys.stderr)
+    
+    def finalize(fd):
+        print("Calling producer finalization")
+        write_messages(producer.on_completion, fd)
+    
+    def write_messages(gen_fn, fd):
         try:
-            messages = producer.produce(files)
-            for msg in messages:
+            for msg in gen_fn():
                 write_message(msg, fd)
                 if isinstance(msg, Error):
                     raise AbortTaggingException("Received an error response from the producer")
@@ -195,7 +202,6 @@ def start_loop_from_producer(
             write_message(Error(message=str(e)), fd)
             if not continue_on_error:
                 raise
-        print(f"Completed batch of {len(files)} files", file=sys.stderr)
     
     reader_thread = threading.Thread(target=stdin_reader, daemon=True)
     reader_thread.start()
@@ -213,6 +219,7 @@ def start_loop_from_producer(
                 if file_path is None:
                     if current_batch:
                         process_batch(current_batch, fdout)
+                    finalize(fdout)
                     fdout.close()
                     return
                 
@@ -227,6 +234,7 @@ def start_loop_from_producer(
                 current_batch = []
             
             if not reader_thread.is_alive() and file_queue.empty():
+                finalize(fdout)
                 break
             
             time.sleep(batch_timeout)

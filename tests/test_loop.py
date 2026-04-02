@@ -202,3 +202,66 @@ def test_run_default(frame_model: FrameModel, test_videos: List[str]):
         assert kwargs["fps"] == 2
         assert kwargs["allow_single_frame"] == False
         assert kwargs["continue_on_error"] == True
+
+def test_loop_with_completion(frame_model: FrameModel, test_videos: List[str], test_images: List[str], test_folder: str):
+    output_path = os.path.join(test_folder, "out.jsonl")
+
+    producer = TagMessageProducer.from_model(frame_model)
+
+    class AllAtOnceWrapper(TagMessageProducer):
+        def __init__(self, producer: TagMessageProducer):
+            self.files = []
+            self.producer = producer
+
+        def produce(self, files: List[str]) -> Iterator[Message]:
+            self.files += files
+            yield from ()
+
+        def on_completion(self) -> Iterator[Message]:
+            yield Tag(start_time=0, end_time=0, tag="on_completion started", source_media="who cares")
+            yield from self.producer.produce(self.files)
+
+    my_favorite_producer = AllAtOnceWrapper(producer)
+
+    read_fd, write_fd = os.pipe()
+    proc = multiprocessing.Process(target=_run_producer_loop, args=(my_favorite_producer, output_path, read_fd, write_fd, False, None))
+    proc.start()
+    os.close(read_fd)
+    write_pipe = os.fdopen(write_fd, 'w')
+
+    write_pipe.write("\n".join(test_videos) + "\n")
+    write_pipe.flush()
+
+    time.sleep(1)
+
+    try:
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+        assert len(lines) == 0
+
+        write_pipe.write("\n".join(test_images) + "\n")
+        write_pipe.flush()
+
+        time.sleep(1)
+
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+        # still nothing
+        assert len(lines) == 0
+
+        # close to trigger eof and release tag messages
+        write_pipe.close()
+
+        time.sleep(1)
+
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+
+        # now after 
+        assert len(lines) > 100
+        # ensure that messages were generated from on_completion
+        assert "on_completion started" in lines[0]
+
+    finally:
+        write_pipe.close()
+        proc.join(timeout=5)

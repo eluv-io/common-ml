@@ -13,6 +13,12 @@ class TagMessageProducer(ABC):
     def produce(self, files: List[str]) -> Iterator[Message]:
         pass
 
+    def on_completion(self) -> Iterator[Message]:
+        """
+        If specified this will run any finalization logic to be run when all files have been received
+        """
+        yield from ()
+    
     @staticmethod
     def from_file_tagger(file_tagger: FileTagger) -> "TagMessageProducer":
         class NewTagMessageProducer(TagMessageProducer):
