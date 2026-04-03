@@ -243,6 +243,6 @@ def start_loop_from_producer(
         except Exception as e:
             logger.opt(exception=e).error("Error in main loop")
             fdout.close()
-            return
+            raise e
 
     fdout.close()
