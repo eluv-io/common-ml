@@ -177,7 +177,7 @@ def start_loop_from_producer(
             print("Stopping stdin reader", file=sys.stderr)
             file_queue.put(None)
 
-    def process_batch(files: list[str], fd):
+    def process_batch(files: List[str], fd):
         print(f"Processing batch of {len(files)} files...", file=sys.stderr)
         for fname in files:
             print(f"Got {fname}")
