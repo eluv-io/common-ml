@@ -94,6 +94,7 @@ class AVModel(ABC):
                     end_time=ts,
                     source_media=source_media,
                     track="",
+                    additional_info=frame_tag.additional_info,
                     frame_info=FrameInfo(frame_idx=frame_idx, box=frame_tag.box),
                 )
 

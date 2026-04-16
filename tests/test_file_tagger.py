@@ -35,12 +35,15 @@ def test_frame_tag(frame_model: FrameModel, test_images: List[str]):
     assert all_tags[0].frame_info
     assert len(all_tags[0].frame_info.box) == 4
     assert all_tags[0].source_media == test_images[0]
+    assert all_tags[0].additional_info
 
     assert all_tags[1].tag == "b"
     assert all_tags[1].source_media == test_images[0]
+    assert all_tags[1].additional_info
 
     assert all_tags[2].tag == "a"
     assert all_tags[2].source_media == test_images[1]
+    assert all_tags[2].additional_info
 
 def test_frame_tag_videos(frame_model: FrameModel, test_videos: List[str]):
     file_tagger = FileTagger.from_frame_model(frame_model, fps=1, allow_single_frame=True)

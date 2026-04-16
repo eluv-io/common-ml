@@ -53,6 +53,7 @@ class FileTagger(ABC):
                             tag=ftag.tag,
                             source_media=file,
                             track="",
+                            additional_info=ftag.additional_info,
                             frame_info=FrameInfo(frame_idx=0, box=ftag.box)
                         )
                         tags.append(out_tag)

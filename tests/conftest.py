@@ -30,7 +30,17 @@ class FakeFrameModel(FrameModel):
         else:
             res = [FrameTag(tag="b", box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4})]
         self.call_count += 1
-        return res
+        # add some random additional_info
+        out = []
+        for r in res:
+            out.append(
+                FrameTag(
+                    tag=r.tag,
+                    box=r.box,
+                    additional_info={"hello": "world"}
+                )
+            )
+        return out
 
 
 @pytest.fixture
