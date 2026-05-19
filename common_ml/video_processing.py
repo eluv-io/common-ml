@@ -33,6 +33,18 @@ def get_fps(video_file: str) -> float:
 
     return fps
 
+@lru_cache(maxsize=2048)
+def get_duration(video_file: str) -> float:
+    cmd = ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+            "-print_format", "json", video_file]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        raise Exception(e.output.decode("utf-8"))
+
+    output = json.loads(output)
+    return float(output["format"]["duration"])
+
 # input can be either downloadUrl or filename
 def get_key_frames(video_file: str) -> Tuple[np.ndarray, List[int], List[float]]:
     cmd = ["ffprobe", "-v", "quiet", "-select_streams", "v", "-show_frames",
