@@ -23,6 +23,10 @@ class Progress(Message):
     source_media: str
 
 @dataclass(frozen=True)
+class ProgressRatio(Message):
+    progress: float
+
+@dataclass(frozen=True)
 class Error(Message):
     message: str
     source_media: Optional[str] = None

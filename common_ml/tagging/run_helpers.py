@@ -106,6 +106,8 @@ def write_message(msg: Message, fout):
         fout.write(json.dumps({"type": "progress", "data": asdict(msg)}) + "\n")
     elif isinstance(msg, Error):
         fout.write(json.dumps({"type": "error", "data": asdict(msg)}) + "\n")
+    elif isinstance(msg, ProgressRatio):
+        fout.write(json.dumps({"type": "progress_ratio", "data": asdict(msg)}) + "\n")
     else:
         raise ValueError(f"Unnexpected message type: {msg}")
     fout.flush()

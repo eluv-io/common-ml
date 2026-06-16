@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time
@@ -261,6 +262,65 @@ def test_loop_with_completion(frame_model: FrameModel, test_videos: List[str], t
         assert len(lines) > 100
         # ensure that messages were generated from on_completion
         assert "on_completion started" in lines[0]
+
+    finally:
+        write_pipe.close()
+        proc.join(timeout=5)
+
+def test_loop_with_progress(frame_model: FrameModel, test_videos: List[str], test_images: List[str], test_folder: str):
+    output_path = os.path.join(test_folder, "out.jsonl")
+
+    producer = TagMessageProducer.from_model(frame_model)
+
+    class PartialProgressWrapper(TagMessageProducer):
+        def __init__(self, producer: TagMessageProducer):
+            self.files = []
+            self.producer = producer
+
+        def produce(self, files: List[str]) -> Iterator[Message]:
+            self.files += files
+            yield from ()
+
+        def on_completion(self) -> Iterator[Message]:
+            for i, f in enumerate(self.files):
+                yield ProgressRatio(progress=(i+1)/len(self.files))
+            yield from self.producer.produce(self.files)
+
+    my_favorite_producer = PartialProgressWrapper(producer)
+
+    read_fd, write_fd = os.pipe()
+    proc = multiprocessing.Process(target=_run_producer_loop, args=(my_favorite_producer, output_path, read_fd, write_fd, False, None))
+    proc.start()
+    os.close(read_fd)
+    write_pipe = os.fdopen(write_fd, 'w')
+
+    write_pipe.write("\n".join(test_videos) + "\n")
+    write_pipe.flush()
+
+    time.sleep(1)
+
+    try:
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+        assert len(lines) == 0
+
+        write_pipe.write("\n".join(test_images) + "\n")
+        write_pipe.flush()
+
+        write_pipe.close()
+
+        time.sleep(1)
+
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+
+        # now after 
+        assert len(lines) > 100
+
+        progress_messages = [json.loads(l) for l in lines if "progress_ratio" in l]
+        assert len(progress_messages) == len(test_videos) + len(test_images)
+        assert 0 < progress_messages[0]["data"]["progress"] < 1
+        assert progress_messages[-1]["data"]["progress"] == 1.0
 
     finally:
         write_pipe.close()
