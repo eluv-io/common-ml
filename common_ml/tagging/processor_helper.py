@@ -149,21 +149,14 @@ class TagProcessorAdapterLogic:
         for info in self.progress_bolus:
             yield Progress(source_media=info.input)
 
-def find_input_range(infos: list[InputRangeInfo], timestamp: float) -> InputRangeInfo | None:
-    left, right = 0, len(infos) - 1
-    
-    while left <= right:
-        mid = (left + right) // 2
-        info = infos[mid]
-        
+def find_input_range(infos: List[InputRangeInfo], timestamp: float) -> Optional[InputRangeInfo]:
+    """Return the most specific (latest-starting) range that contains timestamp."""
+    best: Optional[InputRangeInfo] = None
+    for info in infos:
         if info.start_time <= timestamp <= info.end_time:
-            return info
-        elif timestamp < info.start_time:
-            right = mid - 1
-        else:
-            left = mid + 1
-    
-    return None
+            if best is None or info.start_time > best.start_time:
+                best = info
+    return best
 
 
 
