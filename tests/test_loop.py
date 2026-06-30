@@ -3,10 +3,11 @@ import os
 import sys
 import time
 import multiprocessing
-from typing import Iterator
+from typing import Iterator, List, Optional
 from unittest.mock import patch
 
 from common_ml.tagging.producer import TagMessageProducer
+from common_ml.tagging.models.processor import TagProcessor
 from common_ml.tagging.run_helpers import start_loop_from_frame_model, start_loop_from_producer, run_default
 from common_ml.tagging.models.frame_based import *
 from common_ml.tagging.messages import *
@@ -51,12 +52,10 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         tag_lines = [l for l in lines if "tag" in l]
         num_tag_lines = len(tag_lines)
         assert len(tag_lines) > 100
-
         status_lines = [l for l in lines if "progress" in l]
         assert len(status_lines) == 2
         assert test_videos[0] in status_lines[0]
         assert test_videos[1] in status_lines[1]
-
         write_pipe.write("\n".join(test_images) + "\n")
         write_pipe.flush()
 
@@ -73,6 +72,108 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         assert len(status_lines) == 4
     finally:
         write_pipe.close()
+        proc.join(timeout=5)
+
+def test_loop_for_processor(tag_processor: TagProcessor, test_timestamp_files: List[str], test_folder: str):    
+
+    output_path = os.path.join(test_folder, "out.jsonl")
+
+    os.environ['ELV_CONTENT'] = "iq__pytest"
+    os.environ['ELV_TOKEN'] = "apy_auth"
+
+    read_fd, write_fd = os.pipe()
+    proc = multiprocessing.Process(target=_run_producer_loop, args=(TagMessageProducer.from_tag_processor(tag_processor), output_path, read_fd, write_fd, False, None))
+    proc.start()
+    
+    os.close(read_fd) ## close the read side of the pipe, we are the writer
+    
+    closed = False
+    write_pipe = os.fdopen(write_fd, 'w')
+
+    try:
+        ## file 0 -- 1 part of a 2 part group
+        write_pipe.write("\n".join(test_timestamp_files[0:1]) + "\n")
+        write_pipe.flush()
+
+        time.sleep(2.1)
+
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+        print(str(len(lines)) + " LINES:", "".join(lines))
+        tag_lines = [l for l in lines if "tag" in l]
+        num_tag_lines = len(tag_lines)
+        skip = len(lines)
+        print("number of tag lines (first set):", len(tag_lines))
+
+        assert len(tag_lines) == 100
+
+        status_lines = [l for l in lines if "progress" in l]
+        assert len(status_lines) == 1
+
+        assert test_timestamp_files[0] in status_lines[0]
+
+        ## files 1-3 -- the rest of the first group, and a whole group
+        write_pipe.write("\n".join(test_timestamp_files[1:4]) + "\n")
+        write_pipe.flush()
+
+        time.sleep(2.1)
+        
+        skip = len(lines)
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+            
+        lines = lines[skip:]
+        print(str(len(lines)) + " LINES:", "".join(lines))
+
+        tag_lines = [l for l in lines if "tag" in l]
+        print("number of tag lines (middle set):", len(tag_lines))
+        assert len(tag_lines) == 300
+
+        status_lines = [l for l in lines if "progress" in l]
+        assert len(status_lines) == 3
+
+        assert test_timestamp_files[1] in status_lines[0]
+        assert test_timestamp_files[2] in status_lines[1] 
+        assert test_timestamp_files[3] in status_lines[2]
+
+        ## file 4 should not generate any tags (test processor cutoff range)
+        write_pipe.write("\n".join(test_timestamp_files[4:5]) + "\n")
+        write_pipe.flush()
+
+        time.sleep(2.1)
+
+        skip += len(lines)
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+            
+        lines = lines[skip:]
+        print(str(len(lines)) + " LINES:", "".join(lines))
+
+        tag_lines = [l for l in lines if "tag" in l]
+        print("number of tag lines (final set):", len(tag_lines))
+        assert len(tag_lines) == 0
+
+        status_lines = [l for l in lines if "progress" in l]
+        assert len(status_lines) == 1
+
+        assert test_timestamp_files[4] in status_lines[0]
+
+        write_pipe.close()
+        closed = True
+
+        ## check on completion tags
+        time.sleep(.5)
+
+        skip += len(lines)
+        with open(output_path, "r") as f:
+            lines = f.readlines()
+            
+        lines = lines[skip:]
+        print(str(len(lines)) + " LINES:", "".join(lines))
+
+
+    finally:
+        if not closed: write_pipe.close()
         proc.join(timeout=5)
 
 def test_loop_with_exception(frame_model: FrameModel, test_videos: List[str], test_folder: str):
@@ -236,6 +337,7 @@ def test_loop_with_completion(frame_model: FrameModel, test_videos: List[str], t
     time.sleep(1)
 
     try:
+        print("Output path:", output_path)
         with open(output_path, "r") as f:
             lines = f.readlines()
         assert len(lines) == 0
