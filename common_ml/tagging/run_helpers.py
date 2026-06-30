@@ -26,8 +26,8 @@ def run_default(
         TagProcessor,
         TagMessageProducer
     ],
-    batch_timeout: float = 0.2,
-    batch_limit: Optional[int]=None,
+    batch_timeout: Optional[float] = None,
+    batch_limit: Optional[int] = None,
 ):
     """
     This is the default entry point for running a tagging model. It supports four different interfaces: AVModel, FrameModel, BatchFrameModel, and TagMessageProducer. 
@@ -39,6 +39,12 @@ def run_default(
         batch_timeout: Time in seconds to wait before processing a batch of files.
         batch_limit: Maximum number of files to process in a single batch.
     """
+    if batch_timeout is None:
+        if isinstance(model, TagMessageProducer):
+            batch_timeout = 2
+        else:
+            batch_timeout = 0.2
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
     parser.add_argument('--params', required=False, help='Runtime parameters as JSON string, e.g. \'{"foo": "bar"}\'')
@@ -61,7 +67,7 @@ def run_default(
     elif isinstance(model, AVModel):
         start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
     elif isinstance(model, TagProcessor):
-        start_loop_from_processor(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=2, batch_limit=batch_limit)
+        start_loop_from_processor(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
     elif isinstance(model, TagMessageProducer):
         start_loop_from_producer(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
     else:
@@ -281,7 +287,7 @@ def start_loop_from_producer(
         finalize(fdout)
     except Exception as e:
         logger.opt(exception=e).error("Error in main loop")
-        raise e
+        raise
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt received, exiting...")
     finally:

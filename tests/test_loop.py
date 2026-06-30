@@ -171,6 +171,8 @@ def test_loop_for_processor(tag_processor: TagProcessor, test_timestamp_files: L
         lines = lines[skip:]
         print(str(len(lines)) + " LINES:", "".join(lines))
 
+        ## there should only be one tag at this point
+        assert len(lines) == 1
 
     finally:
         if not closed: write_pipe.close()

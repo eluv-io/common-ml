@@ -1,9 +1,7 @@
-
-
 from dataclasses import dataclass
 import json
 import os
-from typing import Iterator, List
+from typing import Iterator, List, Optional
 from loguru import logger
 
 from common_ml.tagging.messages import Message, Progress, Tag
@@ -132,7 +130,12 @@ class TagProcessorAdapterLogic:
                 source_media_info = find_input_range(self.all_rangeinfos, message.start_time)                    
                 if source_media_info is None:
                     logger.warning(f"Tag produced with start_time {message.start_time} that does not fall within any input range, crediting to first json")
-                    source_media_info = self.all_rangeinfos[0]
+                    if len(self.all_rangeinfos) > 0:
+                        source_media_info = self.all_rangeinfos[0]
+                    else:
+                        source_media_info = InputRangeInfo(0, 0, "")
+                        logger.error("Weird corner case -- model run with no input ranges but on_completion emitted tags anyway.")
+                        
                 yield Tag(
                     start_time=message.start_time,
                     end_time=message.end_time,

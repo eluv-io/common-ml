@@ -1,10 +1,8 @@
 from collections.abc import Iterator
-from dataclasses import dataclass
-from functools import lru_cache
-from typing import Dict, List
 from abc import ABC, abstractmethod
+from typing import Optional
 
-from common_ml.tagging.messages import *
+from common_ml.tagging.messages import Message
 from common_ml.tagging.models.tag_types import FrameInfo, FrameTag, Tag
 from common_ml.tagging.models.frame_based import BatchFrameModel
 from common_ml.video_processing import get_frames, get_fps
