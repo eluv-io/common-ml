@@ -3,7 +3,7 @@ import argparse
 import traceback
 from typing import Union, Any, Dict
 import json
-from queue import Queue
+from queue import Queue, Empty
 from dataclasses import asdict
 import threading
 import time
@@ -23,10 +23,11 @@ def run_default(
         AVModel, 
         FrameModel,
         BatchFrameModel,
+        TagProcessor,
         TagMessageProducer
     ],
-    batch_timeout: float=0.2,
-    batch_limit: Optional[int]=None,
+    batch_timeout: Optional[float] = None,
+    batch_limit: Optional[int] = None,
 ):
     """
     This is the default entry point for running a tagging model. It supports four different interfaces: AVModel, FrameModel, BatchFrameModel, and TagMessageProducer. 
@@ -38,6 +39,12 @@ def run_default(
         batch_timeout: Time in seconds to wait before processing a batch of files.
         batch_limit: Maximum number of files to process in a single batch.
     """
+    if batch_timeout is None:
+        if isinstance(model, TagMessageProducer):
+            batch_timeout = 2
+        else:
+            batch_timeout = 0.2
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', required=True, help='Path to write output tags (.jsonl)')
     parser.add_argument('--params', required=False, help='Runtime parameters as JSON string, e.g. \'{"foo": "bar"}\'')
@@ -47,20 +54,22 @@ def run_default(
     if args.params:
         params = json.loads(args.params)
 
-    # support the following params by default
-
+    # support the following parameter by default
     continue_on_error = params.get("continue_on_error", False)
-    ## for frame models only
-    fps = params.get("fps", 1) # rate at which to tag the source media in the case of video
-    allow_single_frame = params.get("allow_single_frame", True) # configure whether two consecutive identical frames must exist to generate a tag
     
+    if isinstance(model, (FrameModel, BatchFrameModel)):
+        ## frame models additionally support the following parameters by default
 
-    if isinstance(model, TagMessageProducer):
-        start_loop_from_producer(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
+        fps = params.get("fps", 1)                                  # rate at which to tag the source media in the case of video
+        allow_single_frame = params.get("allow_single_frame", True) # configure whether 2 consecutive identical frames must exist to generate tag
+
+        start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame, batch_limit=batch_limit)
     elif isinstance(model, AVModel):
         start_loop_from_av_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
-    elif isinstance(model, (FrameModel, BatchFrameModel)):
-        start_loop_from_frame_model(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, fps=fps, allow_single_frame=allow_single_frame, batch_limit=batch_limit)
+    elif isinstance(model, TagProcessor):
+        start_loop_from_processor(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
+    elif isinstance(model, TagMessageProducer):
+        start_loop_from_producer(model, output_path=args.output_path, continue_on_error=continue_on_error, batch_timeout=batch_timeout, batch_limit=batch_limit)
     else:
         raise ValueError(f"Unsupported model type: {type(model)}")
 
@@ -76,8 +85,7 @@ def catch_errors():
     args, _ = parser.parse_known_args()
     output_path = args.output_path
     def handler(exc_type, exc_value, exc_tb):
-        print("Caught unhandled exception:")
-        traceback.print_exception(exc_type, exc_value, exc_tb)
+        logger.opt(exception = (exc_type, exc_value, exc_tb)).error("Caught unhandled exception:")
         with open(output_path, 'a') as fout:
             write_message(Error(message=f"{exc_type.__name__}: {exc_value}"), fout)
     sys.excepthook = handler
@@ -137,7 +145,27 @@ def start_loop_from_frame_model(
     allow_single_frame: bool=True,
     batch_limit: Optional[int]=None,
 ) -> None:
+
+    if batch_limit is None and not isinstance(model, BatchFrameModel):
+        batch_limit = 1
+
     producer = TagMessageProducer.from_model(model, fps=fps, allow_single_frame=allow_single_frame)
+    start_loop_from_producer(
+        producer=producer,
+        output_path=output_path,
+        continue_on_error=continue_on_error,
+        batch_timeout=batch_timeout,
+        batch_limit=batch_limit,
+    )
+
+def start_loop_from_processor(
+    model: TagProcessor,
+    output_path: str,
+    continue_on_error: bool=False,
+    batch_timeout: float=1,
+    batch_limit: Optional[int]=None,
+) -> None:
+    producer = TagMessageProducer.from_model(model)
     start_loop_from_producer(
         producer=producer,
         output_path=output_path,
@@ -150,8 +178,9 @@ def start_loop_from_producer(
     producer: TagMessageProducer,
     output_path: str,
     continue_on_error: bool=False,
-    batch_timeout: float=0.2,
+    batch_timeout: float = 0.2,
     batch_limit: Optional[int]=None,
+    max_wait: float = 2,
 ) -> None:
     """
     Live mode: reads file paths from stdin and processes them in batches
@@ -164,30 +193,36 @@ def start_loop_from_producer(
         allow_single_frame: Whether to allow processing of single-frame videos, only relevant for FrameModel or BatchFrameModel
     """
     
+    if batch_limit is None and batch_timeout is None:
+        raise ValueError("Either batch_limit or batch_timeout must be specified")
+
     file_queue = Queue()
     
     def stdin_reader():
         """Thread function to read from stdin and add files to queue"""
         try:
+
             for line in sys.stdin:
                 line = line.strip()
+                logger.trace("Read input file: " + line)
                 if line:
                     file_queue.put(line)
+            logger.info("stdin reader exiting normally")
         except (EOFError, KeyboardInterrupt):
             pass
         finally:
-            print("Stopping stdin reader", file=sys.stderr)
+            logger.info("sending None sentinel at end of stdin reader")
             file_queue.put(None)
 
     def process_batch(files: List[str], fd):
-        print(f"Processing batch of {len(files)} files...", file=sys.stderr)
+        logger.info(f"Processing batch of {len(files)} files...")
         for fname in files:
-            print(f"Got {fname}")
+            logger.trace(f"Got {fname}")
         write_messages(lambda: producer.produce(files), fd)
-        print(f"Completed batch of {len(files)} files", file=sys.stderr)
+        logger.info(f"Completed batch of {len(files)} files")
     
     def finalize(fd):
-        print("Calling producer finalization")
+        logger.info("Calling producer finalization")
         write_messages(producer.on_completion, fd)
     
     def write_messages(gen_fn, fd):
@@ -208,43 +243,52 @@ def start_loop_from_producer(
     reader_thread = threading.Thread(target=stdin_reader, daemon=True)
     reader_thread.start()
     
-    current_batch = []
-
     fdout = open(output_path, 'a')
     
-    while True:
-        try:
-            while not file_queue.empty():
+    current_batch = []
+    current_batch_start_time = time.time()
+    seen_end = False
+    sleeptime = 0
+
+    try:
+        while not seen_end or not file_queue.empty() or len(current_batch) > 0:
+            try:
                 file_path = file_queue.get_nowait()
-                
-                # last batch
-                if file_path is None:
-                    if current_batch:
-                        process_batch(current_batch, fdout)
-                    finalize(fdout)
-                    fdout.close()
-                    return
-                
-                # add to current batch to process
-                current_batch.append(file_path)
-                if batch_limit is not None and len(current_batch) >= batch_limit:
-                    process_batch(current_batch, fdout)
-                    current_batch = []
+                sleeptime = 0
+                if file_path is not None:                    
+                    current_batch.append(file_path)
+                    if len(current_batch) == 1:
+                        current_batch_start_time = time.time()
+                elif file_path is None:
+                    seen_end = True
+            except Empty:
+                sleeptime = sleeptime * 1.75 + .1
+                if sleeptime > max_wait: 
+                    sleeptime = max_wait
+                    ## if the reader somehow stopped without emitting None, we will still eventually stop
+                    ## (But don't optimize this because it is a corner corner case)
+                    if not reader_thread.is_alive(): seen_end = True
+                if batch_timeout is not None and sleeptime > batch_timeout - (time.time() - current_batch_start_time): 
+                    sleeptime = batch_timeout - (time.time() - current_batch_start_time)
             
-            if current_batch:
+            if seen_end: sleeptime = 0
+
+            if not current_batch:
+                pass
+            elif seen_end \
+                or (batch_limit is not None and len(current_batch) >= batch_limit) \
+                or (batch_timeout is not None and (time.time() - current_batch_start_time) >= batch_timeout):
                 process_batch(current_batch, fdout)
                 current_batch = []
-            
-            if not reader_thread.is_alive() and file_queue.empty():
-                finalize(fdout)
-                break
-            
-            time.sleep(batch_timeout)
-        except (KeyboardInterrupt, SystemExit):
-            break
-        except Exception as e:
-            logger.opt(exception=e).error("Error in main loop")
-            fdout.close()
-            raise e
+                sleeptime = 0
 
-    fdout.close()
+            if sleeptime > 0: time.sleep(sleeptime)
+
+        finalize(fdout)
+    except Exception as e:
+        logger.opt(exception=e).error("Error in main loop")
+        raise
+    except KeyboardInterrupt:
+        logger.info("KeyboardInterrupt received, exiting...")
+    finally:
+        fdout.close()
