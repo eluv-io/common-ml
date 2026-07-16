@@ -6,17 +6,17 @@ import numpy as np
 from common_ml.utils.files import get_file_type
 from common_ml.tagging.models.frame_based import FrameModel, BatchFrameModel
 from common_ml.tagging.models.av import AVModel
-from common_ml.tagging.models.tag_types import FrameInfo, Tag
+from common_ml.tagging.models.tag_types import BaseTag, FrameInfo, Tag
 
 class FileTagger(ABC):
     @abstractmethod
-    def tag(self, file: str) -> List[Tag]:
+    def tag(self, file: str) -> List[BaseTag]:
         pass
 
     @staticmethod
     def from_video_model(video_model: AVModel) -> 'FileTagger':
         class NewFileTagger(FileTagger):
-            def tag(self, file: str) -> List[Tag]:
+            def tag(self, file: str) -> List[BaseTag]:
                 return video_model.tag(file)
     
         return NewFileTagger()
@@ -35,7 +35,7 @@ class FileTagger(ABC):
         video_model = AVModel.from_frame_model(batched_frame_model, fps, allow_single_frame)
 
         class NewFileTagger(FileTagger):
-            def tag(self, file: str) -> List[Tag]:
+            def tag(self, file: str) -> List[BaseTag]:
                 file_type = get_file_type(file)
                 if file_type == "image":
                     # use the frame model directly for images
@@ -45,7 +45,7 @@ class FileTagger(ABC):
                     img = img[:, :, ::-1]
                     frametags = batched_frame_model.tag_frames(np.array([img]))[0]
 
-                    tags = []
+                    tags: List[BaseTag] = []
                     for ftag in frametags:
                         out_tag = ftag.to_tag(
                             start_time=0,

@@ -1,18 +1,18 @@
 from dataclasses import dataclass, replace
 from functools import lru_cache
-from typing import Dict, Hashable, List
+from typing import Dict, List, cast
 from abc import ABC, abstractmethod
 
 import numpy as np
 
 from common_ml.tagging.messages import BaseTag, VectorTag
-from common_ml.tagging.models.tag_types import BaseFrameTag, FrameInfo, FrameTag, Tag
+from common_ml.tagging.models.tag_types import BaseFrameTag, FrameInfo, FrameTag, Tag, VectorFrameTag
 from common_ml.tagging.models.frame_based import BatchFrameModel
 from common_ml.video_processing import get_frames, get_fps, get_duration
 
 class AVModel(ABC):
     @abstractmethod
-    def tag(self, fpath: str) -> List[Tag]:
+    def tag(self, fpath: str) -> List[BaseTag]:
         pass
 
     @staticmethod
@@ -41,10 +41,10 @@ class AVModel(ABC):
         @dataclass
         class TagWithPos:
             pos: int
-            tag: Tag
+            tag: BaseTag
 
         class NewModel(AVModel):
-            def tag(self, fpath: str) -> List[Tag]:
+            def tag(self, fpath: str) -> List[BaseTag]:
                 key_frames, frame_indices, _ = get_frames(video_file=fpath, fps=fps)
                 video_fps = get_fps(fpath)
                 tagged_w_pos: List[TagWithPos] = []
@@ -58,23 +58,24 @@ class AVModel(ABC):
                 frame_level_tags = [t.tag for t in tagged_w_pos]
                 return frame_level_tags + combined_tags
 
-            def _combine_adjacent(self, tags: List[TagWithPos], allow_single_frame: bool, fps: float) -> List[Tag]:
+            def _combine_adjacent(self, tags: List[TagWithPos], allow_single_frame: bool, fps: float) -> List[BaseTag]:
                 if len(tags) == 0:
                     return []
 
                 frame_time = self._to_milliseconds(1 / fps)
 
-                tag_to_items: Dict[Hashable, List[TagWithPos]] = {}
+                tag_to_items: Dict[str, List[TagWithPos]] = {}
                 for twp in tags:
-                    key = twp.tag.grouping_key()
-                    if key is None:
-                        # payload opts out of run-length combination (e.g. vectors)
+                    if not isinstance(twp.tag, Tag):
+                        # run-length merging applies to string tags (Tag) only; other
+                        # payloads (e.g. vectors) pass through as per-frame tags
                         continue
+                    key = twp.tag.tag
                     if key not in tag_to_items:
                         tag_to_items[key] = []
                     tag_to_items[key].append(twp)
 
-                def combined(left: TagWithPos, right: TagWithPos) -> Tag:
+                def combined(left: TagWithPos, right: TagWithPos) -> BaseTag:
                     # rebuild from a representative member so the payload (tag/vector/...)
                     # is carried over generically; drop frame-level-only fields
                     return replace(
@@ -124,17 +125,20 @@ class AVModel(ABC):
         assert fps > 0
 
         class NewModel(AVModel):
-            def tag(self, fpath: str) -> List[Tag]:
+            def tag(self, fpath: str) -> List[BaseTag]:
                 key_frames, frame_indices, times = get_frames(video_file=fpath, fps=fps)
                 ftags_by_img = frame_model.tag_frames(key_frames)
 
-                out: List[Tag] = []
+                out: List[BaseTag] = []
                 all_vecs: List[List[float]] = []
                 for fidx, time_s, ftags in zip(frame_indices, times, ftags_by_img):
                     for ft in ftags:
-                        all_vecs.append(ft.vector)
+                        # this factory requires a vector frame model; narrow the base
+                        # BatchFrameModel type for type checking
+                        vec_ft = cast(VectorFrameTag, ft)
+                        all_vecs.append(vec_ft.vector)
                         if emit_frame_vectors:
-                            out.append(self._frame_tag_to_video_tag(ft, fidx, fpath, time_s))
+                            out.append(self._frame_tag_to_video_tag(vec_ft, fidx, fpath, time_s))
 
                 if not all_vecs:
                     return out

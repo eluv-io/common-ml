@@ -1,8 +1,8 @@
-from typing import Optional, Dict, List, ClassVar, Hashable
+from typing import Optional, Dict, List, ClassVar
 from dataclasses import dataclass, field
 
 class Message:
-    message_type: ClassVar[str] = "message"
+    message_type: ClassVar[str]
 
 @dataclass(frozen=True)
 class FrameInfo:
@@ -18,25 +18,15 @@ class BaseTag(Message):
     additional_info: Optional[Dict] = None
     frame_info: Optional[FrameInfo] = None
 
-    def grouping_key(self) -> Optional[Hashable]:
-        """Key used by AVModel._combine_adjacent to merge consecutive frame
-        detections into a single time-ranged tag. Return None to opt out of
-        combination entirely (each detection stands on its own)."""
-        return None
-
 @dataclass(frozen=True, kw_only=True)
 class Tag(BaseTag):
     message_type: ClassVar[str] = "tag"
     tag: str
 
-    def grouping_key(self) -> Optional[Hashable]:
-        return self.tag
-
 @dataclass(frozen=True, kw_only=True)
 class VectorTag(BaseTag):
     message_type: ClassVar[str] = "vector_tag"
     vector: List[float] = field(default_factory=list)
-    # inherits grouping_key() -> None: vectors are never run-length combined
 
 @dataclass(frozen=True)
 class Progress(Message):
