@@ -95,6 +95,13 @@ def vector_frame_model():
     return FakeVectorFrameModel()
 
 @pytest.fixture
+def vector_av_model():
+    # real pooling AVModel over a fake frame model: exercises the actual pooling
+    # pipeline while keeping per-frame vectors deterministic
+    batch = BatchFrameModel.from_frame_model(FakeVectorFrameModel())
+    return AVModel.from_vector_frame_model(batch, fps=1.0)
+
+@pytest.fixture
 def batch_frame_model(frame_model):
     return BatchFrameModel.from_frame_model(frame_model)
 
