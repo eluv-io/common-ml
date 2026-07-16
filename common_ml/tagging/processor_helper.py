@@ -1,10 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 import os
 from typing import Iterator, List, Optional
 from loguru import logger
 
-from common_ml.tagging.messages import Message, Progress, Tag
+from common_ml.tagging.messages import Message, Progress, Tag, BaseTag
 from common_ml.tagging.models.processor import TagProcessor
 
 @dataclass
@@ -74,7 +74,7 @@ class TagProcessorAdapterLogic:
             logger.info(f"Processing range {start} to {end}")
             for message in self.tag_processor.process(self.iq, self.auth, start, end):
                 source_media_info = None
-                if isinstance(message, Tag):
+                if isinstance(message, BaseTag):
                     source_media_info = find_input_range(rangeinfos, message.start_time)
                     if source_media_info is None:
                         source_media_info = find_input_range(self.all_rangeinfos, message.start_time)
@@ -94,16 +94,8 @@ class TagProcessorAdapterLogic:
                     elif self.in_order == True and message.start_time < self.last_time:
                         raise Exception("TagProcessor declared itself in order but produced out of order tags")
                     
-                    yield Tag(
-                        start_time=message.start_time,
-                        end_time=message.end_time,
-                        tag=message.tag,
-                        source_media=source_media_info.input,
-                        track=message.track,
-                        additional_info=message.additional_info,
-                        frame_info=message.frame_info,
-                    )
-                                                            
+                    yield replace(message, source_media=source_media_info.input)
+
                     if self.in_order:
                         while next_progress_rangeinfo < len(rangeinfos) and rangeinfos[next_progress_rangeinfo].input != source_media_info.input:
                             yield Progress(source_media=rangeinfos[next_progress_rangeinfo].input)
@@ -126,8 +118,8 @@ class TagProcessorAdapterLogic:
     def on_completion(self) -> Iterator[Message]:
         for message in self.tag_processor.on_completion():
             source_media_info = None
-            if isinstance(message, Tag):
-                source_media_info = find_input_range(self.all_rangeinfos, message.start_time)                    
+            if isinstance(message, BaseTag):
+                source_media_info = find_input_range(self.all_rangeinfos, message.start_time)
                 if source_media_info is None:
                     logger.warning(f"Tag produced with start_time {message.start_time} that does not fall within any input range, crediting to first json")
                     if len(self.all_rangeinfos) > 0:
@@ -135,16 +127,8 @@ class TagProcessorAdapterLogic:
                     else:
                         source_media_info = InputRangeInfo(0, 0, "")
                         logger.error("Weird corner case -- model run with no input ranges but on_completion emitted tags anyway.")
-                        
-                yield Tag(
-                    start_time=message.start_time,
-                    end_time=message.end_time,
-                    tag=message.tag,
-                    source_media=source_media_info.input,
-                    track=message.track,
-                    additional_info=message.additional_info,
-                    frame_info=message.frame_info,
-                )
+
+                yield replace(message, source_media=source_media_info.input)
             else:
                 yield message
 

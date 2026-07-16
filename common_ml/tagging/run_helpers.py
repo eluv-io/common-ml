@@ -108,16 +108,11 @@ class AbortTaggingException(Exception):
     pass
 
 def write_message(msg: Message, fout):
-    if isinstance(msg, Tag):
-        fout.write(json.dumps({"type": "tag", "data": asdict(msg)}) + "\n")
-    elif isinstance(msg, Progress):
-        fout.write(json.dumps({"type": "progress", "data": asdict(msg)}) + "\n")
-    elif isinstance(msg, Error):
-        fout.write(json.dumps({"type": "error", "data": asdict(msg)}) + "\n")
-    elif isinstance(msg, ProgressRatio):
-        fout.write(json.dumps({"type": "progress_ratio", "data": asdict(msg)}) + "\n")
-    else:
-        raise ValueError(f"Unnexpected message type: {msg}")
+    # dispatch on the per-type message_type discriminator; adding a new tag type
+    # (e.g. VectorTag) requires no change here.
+    if not isinstance(msg, (BaseTag, Progress, ProgressRatio, Error)):
+        raise ValueError(f"Unexpected message type: {msg}")
+    fout.write(json.dumps({"type": msg.message_type, "data": asdict(msg)}) + "\n")
     fout.flush()
 
 def start_loop_from_av_model(

@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
-from typing import Dict, List
+from typing import Dict, Hashable, List
 from abc import ABC, abstractmethod
 
 from common_ml.tagging.models.tag_types import FrameInfo, FrameTag, Tag
@@ -46,15 +46,29 @@ class AVModel(ABC):
 
                 frame_time = self._to_milliseconds(1 / fps)
 
-                tag_to_items: Dict[str, List[TagWithPos]] = {}
+                tag_to_items: Dict[Hashable, List[TagWithPos]] = {}
                 for twp in tags:
-                    text = twp.tag.tag
-                    if text not in tag_to_items:
-                        tag_to_items[text] = []
-                    tag_to_items[text].append(twp)
+                    key = twp.tag.grouping_key()
+                    if key is None:
+                        # payload opts out of run-length combination (e.g. vectors)
+                        continue
+                    if key not in tag_to_items:
+                        tag_to_items[key] = []
+                    tag_to_items[key].append(twp)
+
+                def combined(left: TagWithPos, right: TagWithPos) -> Tag:
+                    # rebuild from a representative member so the payload (tag/vector/...)
+                    # is carried over generically; drop frame-level-only fields
+                    return replace(
+                        left.tag,
+                        start_time=left.tag.start_time,
+                        end_time=right.tag.end_time + frame_time,
+                        additional_info=None,
+                        frame_info=None,
+                    )
 
                 result = []
-                for text, items in tag_to_items.items():
+                for key, items in tag_to_items.items():
                     sorted_items = sorted(items, key=lambda x: x.pos)
                     left = sorted_items[0]
                     right = sorted_items[0]
@@ -63,38 +77,22 @@ class AVModel(ABC):
                             right = item
                         else:
                             if allow_single_frame or right.pos > left.pos:
-                                result.append(Tag(
-                                    tag=text,
-                                    start_time=left.tag.start_time,
-                                    end_time=right.tag.end_time + frame_time,
-                                    source_media=left.tag.source_media,
-                                    track=left.tag.track,
-                                    frame_info=None,
-                                ))
+                                result.append(combined(left, right))
                             left = item
                             right = item
 
                     if allow_single_frame or right.pos > left.pos:
-                        result.append(Tag(
-                            tag=text,
-                            start_time=left.tag.start_time,
-                            end_time=right.tag.end_time + frame_time,
-                            source_media=left.tag.source_media,
-                            track=left.tag.track,
-                            frame_info=None,
-                        ))
+                        result.append(combined(left, right))
 
                 return result
 
             def _frame_tag_to_video_tag(self, frame_tag: FrameTag, frame_idx: int, source_media: str) -> Tag:
                 ts = self._to_milliseconds(frame_idx / get_fps(source_media))
-                return Tag(
-                    tag=frame_tag.tag,
+                return frame_tag.to_tag(
                     start_time=ts,
                     end_time=ts,
                     source_media=source_media,
                     track="",
-                    additional_info=frame_tag.additional_info,
                     frame_info=FrameInfo(frame_idx=frame_idx, box=frame_tag.box),
                 )
 

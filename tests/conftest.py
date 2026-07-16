@@ -41,6 +41,24 @@ class FakeFrameModel(FrameModel):
             )
         return out
 
+class FakeVectorFrameModel(FrameModel):
+    def __init__(self, dim: int = 4):
+        self.dim = dim
+        self.call_count = 0
+
+    def tag_frame(self, img):
+        # one vector per frame; contents vary per call so successive frames differ
+        base = float(self.call_count)
+        self.call_count += 1
+        vector = [base + i for i in range(self.dim)]
+        return [
+            VectorFrameTag(
+                vector=vector,
+                box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4},
+                additional_info={"hello": "world"},
+            )
+        ]
+
 class FakeTagProcessor(TagProcessor):
     def __init__(self, max_start_timestamp = 1e12):
         self.max_start_timestamp = max_start_timestamp
@@ -71,6 +89,10 @@ def video_model():
 @pytest.fixture
 def frame_model():
     return FakeFrameModel()
+
+@pytest.fixture
+def vector_frame_model():
+    return FakeVectorFrameModel()
 
 @pytest.fixture
 def batch_frame_model(frame_model):

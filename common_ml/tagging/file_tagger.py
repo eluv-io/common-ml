@@ -47,14 +47,12 @@ class FileTagger(ABC):
 
                     tags = []
                     for ftag in frametags:
-                        out_tag = Tag(
+                        out_tag = ftag.to_tag(
                             start_time=0,
                             end_time=0,
-                            tag=ftag.tag,
                             source_media=file,
                             track="",
-                            additional_info=ftag.additional_info,
-                            frame_info=FrameInfo(frame_idx=0, box=ftag.box)
+                            frame_info=FrameInfo(frame_idx=0, box=ftag.box),
                         )
                         tags.append(out_tag)
 
