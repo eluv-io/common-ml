@@ -2,11 +2,15 @@ import io
 import json
 from typing import List
 
+import numpy as np
+
 from common_ml.tagging.messages import VectorTag, Tag, BaseTag
-from common_ml.tagging.models.frame_based import FrameModel
+from common_ml.tagging.models.frame_based import FrameModel, BatchFrameModel
+from common_ml.tagging.models.av import AVModel
 from common_ml.tagging.models.tag_types import VectorFrameTag
 from common_ml.tagging.file_tagger import FileTagger
 from common_ml.tagging.run_helpers import write_message
+from common_ml.video_processing import get_duration
 
 
 def test_vector_type_basics():
@@ -76,6 +80,52 @@ def test_vector_tag_serialization():
     assert record["data"]["source_media"] == "m.mp4"
     # the discriminator is a ClassVar, not a field -> must not leak into data
     assert "message_type" not in record["data"]
+
+
+def test_vector_av_pooling(vector_frame_model: FrameModel, test_videos: List[str]):
+    batch = BatchFrameModel.from_frame_model(vector_frame_model)
+    model = AVModel.from_vector_frame_model(batch, fps=1.0)
+
+    fpath = test_videos[0]
+    tags = model.tag(fpath)
+
+    # exactly one video-level vector, no per-frame vectors by default
+    assert len(tags) == 1
+    v = tags[0]
+    assert isinstance(v, VectorTag)
+    assert v.frame_info is None
+    assert v.start_time == 0
+    # spans the whole media duration, not just the sampled range
+    assert v.end_time == round(get_duration(fpath) * 1000)
+    assert len(v.vector) == vector_frame_model.dim
+    # normalized by default
+    assert abs(float(np.linalg.norm(v.vector)) - 1.0) < 1e-6
+
+
+def test_vector_av_pooling_emit_frames_no_normalize(vector_frame_model: FrameModel, test_videos: List[str]):
+    batch = BatchFrameModel.from_frame_model(vector_frame_model)
+    model = AVModel.from_vector_frame_model(batch, fps=1.0, normalize=False, emit_frame_vectors=True)
+
+    fpath = test_videos[0]
+    tags = model.tag(fpath)
+
+    frame_tags = [t for t in tags if t.frame_info is not None]
+    pooled_tags = [t for t in tags if t.frame_info is None]
+
+    assert len(pooled_tags) == 1
+    assert tags[-1].frame_info is None      # pooled vector is emitted last
+    n = len(frame_tags)
+    assert n > 0
+
+    # per-frame vectors are instantaneous
+    for t in frame_tags:
+        assert isinstance(t, VectorTag)
+        assert t.start_time == t.end_time
+
+    # FakeVectorFrameModel yields frame i -> [i, i+1, i+2, i+3]; unnormalized mean
+    # over n frames is [(n-1)/2 + j].
+    expected = [(n - 1) / 2 + j for j in range(vector_frame_model.dim)]
+    assert np.allclose(pooled_tags[0].vector, expected)
 
 
 def test_string_and_vector_serialize_differently():
