@@ -41,7 +41,7 @@ class FakeFrameModel(FrameModel):
             )
         return out
 
-class FakeVectorFrameModel(FrameModel):
+class FakeFrameVectorModel(FrameModel):
     def __init__(self, dim: int = 4):
         self.dim = dim
         self.call_count = 0
@@ -52,7 +52,7 @@ class FakeVectorFrameModel(FrameModel):
         self.call_count += 1
         vector = [base + i for i in range(self.dim)]
         return [
-            VectorFrameTag(
+            FrameVectorTag(
                 vector=vector,
                 box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4},
                 additional_info={"hello": "world"},
@@ -92,14 +92,14 @@ def frame_model():
 
 @pytest.fixture
 def vector_frame_model():
-    return FakeVectorFrameModel()
+    return FakeFrameVectorModel()
 
 @pytest.fixture
 def vector_av_model():
     # real pooling AVModel over a fake frame model: exercises the actual pooling
     # pipeline while keeping per-frame vectors deterministic
-    batch = BatchFrameModel.from_frame_model(FakeVectorFrameModel())
-    return AVModel.from_vector_frame_model(batch, fps=1.0)
+    batch = BatchFrameModel.from_frame_model(FakeFrameVectorModel())
+    return AVModel.from_frame_vector_model(batch, fps=1.0)
 
 @pytest.fixture
 def batch_frame_model(frame_model):

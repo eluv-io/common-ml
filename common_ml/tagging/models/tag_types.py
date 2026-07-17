@@ -24,7 +24,7 @@ class FrameTag(BaseFrameTag):
         return Tag(tag=self.tag, additional_info=self.additional_info, **video_fields)
 
 @dataclass(frozen=True, kw_only=True)
-class VectorFrameTag(BaseFrameTag):
+class FrameVectorTag(BaseFrameTag):
     vector: List[float] = field(default_factory=list)
 
     def to_tag(self, **video_fields) -> VectorTag:

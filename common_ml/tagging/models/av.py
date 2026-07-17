@@ -1,13 +1,14 @@
 from dataclasses import dataclass, replace
 from functools import lru_cache
-from typing import Dict, List, cast
+from typing import Dict, List, Optional, cast
 from abc import ABC, abstractmethod
 
 import numpy as np
 
 from common_ml.tagging.messages import BaseTag, VectorTag
-from common_ml.tagging.models.tag_types import BaseFrameTag, FrameInfo, FrameTag, Tag, VectorFrameTag
+from common_ml.tagging.models.tag_types import BaseFrameTag, FrameInfo, FrameTag, Tag, FrameVectorTag
 from common_ml.tagging.models.frame_based import BatchFrameModel
+from common_ml.tagging.models.video_based import VideoVectorModel
 from common_ml.video_processing import get_frames, get_fps, get_duration
 
 class AVModel(ABC):
@@ -108,7 +109,7 @@ class AVModel(ABC):
         return NewModel()
 
     @staticmethod
-    def from_vector_frame_model(
+    def from_frame_vector_model(
         frame_model: BatchFrameModel,
         fps: float,
         normalize: bool = True,
@@ -135,7 +136,7 @@ class AVModel(ABC):
                     for ft in ftags:
                         # this factory requires a vector frame model; narrow the base
                         # BatchFrameModel type for type checking
-                        vec_ft = cast(VectorFrameTag, ft)
+                        vec_ft = cast(FrameVectorTag, ft)
                         all_vecs.append(vec_ft.vector)
                         if emit_frame_vectors:
                             out.append(self._frame_tag_to_video_tag(vec_ft, fidx, fpath, time_s))
@@ -153,6 +154,96 @@ class AVModel(ABC):
                     vector=pooled.tolist(),
                     start_time=0,
                     end_time=self._to_milliseconds(get_duration(fpath)),  # whole media duration
+                    source_media=fpath,
+                    track="",
+                    frame_info=None,
+                ))
+                return out
+
+        return NewModel()
+
+    @staticmethod
+    def from_video_vector_model(
+        model: VideoVectorModel,
+        segment_length_s: Optional[float] = 30.0,
+        normalize: bool = True,
+        emit_segment_vectors: bool = False,
+    ) -> 'AVModel':
+        """Produce a whole-video vector via the model's own (temporal-aware) video path.
+
+        Unlike `from_frame_vector_model` (which embeds frames independently and
+        mean-pools, discarding temporal/motion information), the embedding of each
+        window is delegated to `model.embed_video`, so any temporal structure the
+        model captures is preserved.
+
+        The video is split into fixed-length segments and each segment is embedded
+        over its own ``(start_ms, end_ms)`` window; this keeps memory bounded and
+        frame sampling dense regardless of total length (a 30s window is sampled
+        far more densely than one pass over an 8-hour file). The per-segment
+        vectors are mean-pooled into a single whole-video `VectorTag`. Set
+        `emit_segment_vectors=True` to additionally emit one `VectorTag` per
+        segment (with real timestamps) for finer-grained retrieval.
+
+        This factory is model-agnostic: it works with any `VideoVectorModel`
+        (native video encoder, 3D-CNN, ...), not just frame-based embedders.
+
+        Args:
+            model: any VideoVectorModel implementing
+                `embed_video(fpath, start_ms, end_ms) -> List[float]`.
+            segment_length_s: segment duration in seconds. ``None`` (or a value
+                >= the media duration) means embed the whole video as one window.
+            normalize: L2-normalize emitted vectors (for cosine-similarity retrieval).
+            emit_segment_vectors: also emit one VectorTag per segment.
+        """
+
+        class NewModel(AVModel):
+            def tag(self, fpath: str) -> List[BaseTag]:
+                duration_s = get_duration(fpath)
+                duration_ms = self._to_milliseconds(duration_s)
+
+                # Build segment [start_ms, end_ms] windows over the media.
+                if segment_length_s is None or segment_length_s <= 0 or duration_s <= segment_length_s:
+                    windows = [(0, duration_ms)]
+                else:
+                    seg_ms = self._to_milliseconds(segment_length_s)
+                    windows = []
+                    start_ms = 0
+                    while start_ms < duration_ms:
+                        windows.append((start_ms, min(start_ms + seg_ms, duration_ms)))
+                        start_ms += seg_ms
+
+                def _l2(vec: np.ndarray) -> np.ndarray:
+                    if normalize:
+                        norm = np.linalg.norm(vec)
+                        if norm > 0:
+                            return vec / norm
+                    return vec
+
+                out: List[BaseTag] = []
+                segment_vecs: List[np.ndarray] = []
+                for (start_ms, end_ms) in windows:
+                    vec = np.asarray(model.embed_video(fpath, start_ms, end_ms), dtype=np.float64)
+                    if vec.size == 0:
+                        continue
+                    segment_vecs.append(vec)
+                    if emit_segment_vectors:
+                        out.append(VectorTag(
+                            vector=_l2(vec).tolist(),
+                            start_time=start_ms,
+                            end_time=end_ms,
+                            source_media=fpath,
+                            track="",
+                            frame_info=None,
+                        ))
+
+                if not segment_vecs: # no vector tags -> return empty list
+                    return out
+
+                pooled = _l2(np.mean(np.asarray(segment_vecs, dtype=np.float64), axis=0))
+                out.append(VectorTag(
+                    vector=pooled.tolist(),
+                    start_time=0,
+                    end_time=duration_ms,  # whole media duration
                     source_media=fpath,
                     track="",
                     frame_info=None,
