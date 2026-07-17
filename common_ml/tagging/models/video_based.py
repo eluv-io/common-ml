@@ -15,7 +15,13 @@ class VideoVectorModel(ABC):
     """
 
     @abstractmethod
-    def embed_video(self, fpath: str, start_ms: Optional[int] = None, end_ms: Optional[int] = None) -> List[float]:
+    def embed_video(
+        self,
+        fpath: str,
+        start_ms: Optional[int] = None,
+        end_ms: Optional[int] = None,
+        normalize: Optional[bool] = None,
+    ) -> List[float]:
         """Embed a whole video, or the time window ``[start_ms, end_ms]`` of it, into one vector.
 
         Segmentation is driven by the caller (the AVModel factory): it passes a
@@ -35,6 +41,11 @@ class VideoVectorModel(ABC):
             Window start in milliseconds (inclusive). ``None`` -> start of media.
         end_ms : Optional[int]
             Window end in milliseconds (exclusive). ``None`` -> end of media.
+        normalize : Optional[bool]
+            Whether to L2-normalize the returned vector. ``None`` -> use the
+            implementation's own default (typically normalized (True)). The factory
+            threads its own ``normalize`` here so each segment is normalized (or
+            raw) before pooling.
 
         Returns
         -------

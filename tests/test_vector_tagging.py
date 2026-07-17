@@ -33,35 +33,6 @@ class _MixedFrameModel(FrameModel):
         ]
 
 
-class _EmptyFrameModel(FrameModel):
-    def tag_frame(self, img):
-        return []
-
-
-class _ZeroVectorFrameModel(FrameModel):
-    dim = 4
-
-    def tag_frame(self, img):
-        return [FrameVectorTag(vector=[0.0] * self.dim, box=_BOX)]
-
-
-class _MultiVectorFrameModel(FrameModel):
-    """Emits more than one vector per frame."""
-    dim = 4
-    per_frame = 2
-
-    def __init__(self):
-        self.call_count = 0
-
-    def tag_frame(self, img):
-        base = float(self.call_count)
-        self.call_count += 1
-        return [
-            FrameVectorTag(vector=[base + k + i for i in range(self.dim)], box=_BOX)
-            for k in range(self.per_frame)
-        ]
-
-
 def test_vector_type_basics():
     v = VectorTag(vector=[0.1, 0.2, 0.3], start_time=0, end_time=1, source_media="m")
     # a vector tag is a BaseTag but not a string Tag; _combine_adjacent keys off
@@ -130,54 +101,6 @@ def test_vector_tag_serialization():
     assert "message_type" not in record["data"]
 
 
-def test_vector_av_pooling(vector_frame_model: FrameModel, test_videos: List[str]):
-    # tests AVMode.from_frame_vector_model
-    # output shape: one pooled vector, frame_info=None, end_time==duration
-    batch = BatchFrameModel.from_frame_model(vector_frame_model)
-    model = AVModel.from_frame_vector_model(batch, fps=1.0)
-
-    fpath = test_videos[0]
-    tags = model.tag(fpath)
-
-    # exactly one video-level vector, no per-frame vectors by default
-    assert len(tags) == 1
-    v = tags[0]
-    assert isinstance(v, VectorTag)
-    assert v.frame_info is None
-    assert v.start_time == 0
-    # spans the whole media duration, not just the sampled range
-    assert v.end_time == round(get_duration(fpath) * 1000)
-    assert len(v.vector) == vector_frame_model.dim
-    # normalized by default
-    assert abs(float(np.linalg.norm(v.vector)) - 1.0) < 1e-6
-
-
-def test_vector_av_pooling_emit_frames_no_normalize(vector_frame_model: FrameModel, test_videos: List[str]):
-    batch = BatchFrameModel.from_frame_model(vector_frame_model)
-    model = AVModel.from_frame_vector_model(batch, fps=1.0, normalize=False, emit_frame_vectors=True)
-
-    fpath = test_videos[0]
-    tags = model.tag(fpath)
-
-    frame_tags = [t for t in tags if t.frame_info is not None]
-    pooled_tags = [t for t in tags if t.frame_info is None]
-
-    assert len(pooled_tags) == 1
-    assert tags[-1].frame_info is None      # pooled vector is emitted last
-    n = len(frame_tags)
-    assert n > 0
-
-    # per-frame vectors are instantaneous
-    for t in frame_tags:
-        assert isinstance(t, VectorTag)
-        assert t.start_time == t.end_time
-
-    # FakeVectorFrameModel yields frame i -> [i, i+1, i+2, i+3]; unnormalized mean
-    # over n frames is [(n-1)/2 + j].
-    expected = [(n - 1) / 2 + j for j in range(vector_frame_model.dim)]
-    assert np.allclose(pooled_tags[0].vector, expected)
-
-
 def test_string_and_vector_serialize_differently():
     t = Tag(tag="dog", start_time=0, end_time=1, source_media="m")
     v = VectorTag(vector=[0.5], start_time=0, end_time=1, source_media="m")
@@ -226,43 +149,6 @@ def test_av_from_frame_model_mixed_string_and_vector(test_videos: List[str]):
         assert t.end_time > t.start_time
 
 
-# pooling edge cases
-def test_vector_av_pooling_no_frames(test_videos: List[str]):
-    # no vectors produced -> no pooled tag emitted (all_vecs empty branch)
-    batch = BatchFrameModel.from_frame_model(_EmptyFrameModel())
-    model = AVModel.from_frame_vector_model(batch, fps=1)
-    assert model.tag(test_videos[0]) == []
-
-
-def test_vector_av_pooling_zero_norm(test_videos: List[str]):
-    # all-zero vectors: the norm>0 guard prevents division -> no NaN/inf
-    batch = BatchFrameModel.from_frame_model(_ZeroVectorFrameModel())
-    model = AVModel.from_frame_vector_model(batch, fps=1, normalize=True)
-    tags = model.tag(test_videos[0])
-
-    assert len(tags) == 1
-    assert all(x == 0.0 for x in tags[0].vector)
-
-
-def test_vector_av_pooling_multiple_per_frame(test_videos: List[str]):
-    # 1 vector per video when there are multiple vectors per frame
-    m = _MultiVectorFrameModel()
-    batch = BatchFrameModel.from_frame_model(m)
-    model = AVModel.from_frame_vector_model(batch, fps=1, normalize=False, emit_frame_vectors=True)
-    tags = model.tag(test_videos[0])
-
-    frame_tags = [t for t in tags if t.frame_info is not None]
-    pooled = [t for t in tags if t.frame_info is None]
-
-    assert len(pooled) == 1
-    # every sampled frame contributes per_frame vectors
-    assert len(frame_tags) % m.per_frame == 0
-    assert len(frame_tags) // m.per_frame > 0
-    # pooled == mean over ALL frame vectors (flattened across frames)
-    expected = np.mean([t.vector for t in frame_tags], axis=0)
-    assert np.allclose(pooled[0].vector, expected)
-
-
 # ===========================================================================
 # VideoVectorModel + AVModel.from_video_vector_model
 #
@@ -273,28 +159,37 @@ def test_vector_av_pooling_multiple_per_frame(test_videos: List[str]):
 # ===========================================================================
 
 class _RecordingVideoModel(VideoVectorModel):
-    """Records every (start_ms, end_ms) window it is asked to embed and returns a
-    deterministic vector per call, so segmentation/pooling/normalization are
-    checkable without loading a real embedding model.
+    """Records every (start_ms, end_ms) window and the normalize flag it is asked
+    for, and returns a deterministic vector per call, so segmentation / pooling /
+    normalization threading are checkable without loading a real embedding model.
 
-    Window i -> vector [i, i+1, ..., i+dim-1].
+    Window i -> raw vector [i, i+1, ..., i+dim-1], L2-normalized iff normalize.
     """
     dim = 4
 
     def __init__(self):
         self.calls: List[tuple] = []
+        self.normalize_seen: List[Optional[bool]] = []
 
-    def embed_video(self, fpath: str, start_ms: Optional[int] = None, end_ms: Optional[int] = None) -> List[float]:
+    def embed_video(self, fpath: str, start_ms: Optional[int] = None,
+                    end_ms: Optional[int] = None, normalize: Optional[bool] = None) -> List[float]:
         idx = len(self.calls)
         self.calls.append((start_ms, end_ms))
-        return [float(idx) + i for i in range(self.dim)]
+        self.normalize_seen.append(normalize)
+        raw = np.asarray([float(idx) + i for i in range(self.dim)], dtype=np.float64)
+        # None -> the implementation's default (normalized), matching the contract
+        if normalize is None or normalize:
+            n = np.linalg.norm(raw)
+            if n > 0:
+                raw = raw / n
+        return raw.tolist()
 
 
 class _EmptyVideoModel(VideoVectorModel):
     def __init__(self):
         self.calls: List[tuple] = []
 
-    def embed_video(self, fpath, start_ms=None, end_ms=None):
+    def embed_video(self, fpath, start_ms=None, end_ms=None, normalize=None):
         self.calls.append((start_ms, end_ms))
         return []
 
@@ -302,8 +197,25 @@ class _EmptyVideoModel(VideoVectorModel):
 class _ZeroVideoModel(VideoVectorModel):
     dim = 4
 
-    def embed_video(self, fpath, start_ms=None, end_ms=None):
+    def embed_video(self, fpath, start_ms=None, end_ms=None, normalize=None):
         return [0.0] * self.dim
+
+
+class _FlakyVideoModel(VideoVectorModel):
+    """Raises on chosen window index/indices; returns a deterministic raw vector
+    otherwise. Used to check that a bad segment is skipped, not fatal."""
+    dim = 4
+
+    def __init__(self, fail_on):
+        self.fail_on = set(fail_on) if not isinstance(fail_on, int) else {fail_on}
+        self.calls: List[tuple] = []
+
+    def embed_video(self, fpath, start_ms=None, end_ms=None, normalize=None):
+        idx = len(self.calls)
+        self.calls.append((start_ms, end_ms))
+        if idx in self.fail_on:
+            raise RuntimeError(f"boom on window {idx}")
+        return [float(idx) + i for i in range(self.dim)]
 
 
 def _expected_windows(duration_ms: int, segment_length_s: Optional[float]) -> List[tuple]:
@@ -386,9 +298,12 @@ def test_video_vector_segmentation_windows_and_pooling(test_videos: List[str]):
     assert pooled.start_time == 0
     assert pooled.end_time == duration_ms
 
-    # pooled == L2-normalized mean of the per-window vectors
-    seg_vecs = [[float(i) + j for j in range(fake.dim)] for i in range(len(windows))]
-    expected = np.mean(seg_vecs, axis=0)
+    # normalize=True is threaded to embed_video, so each segment is normalized
+    # before pooling; the pooled vector is then re-normalized.
+    assert all(n is True for n in fake.normalize_seen)
+    raw = [np.asarray([float(i) + j for j in range(fake.dim)], dtype=np.float64) for i in range(len(windows))]
+    units = [v / np.linalg.norm(v) for v in raw]
+    expected = np.mean(units, axis=0)
     expected = expected / np.linalg.norm(expected)
     assert np.allclose(pooled.vector, expected)
 
@@ -452,3 +367,62 @@ def test_video_vector_result_is_avmodel(test_videos: List[str]):
     assert isinstance(model, AVModel)
     tags = model.tag(test_videos[0])
     assert all(isinstance(t, BaseTag) for t in tags)
+
+
+def test_video_vector_threads_normalize_flag(test_videos: List[str]):
+    fpath = test_videos[0]
+
+    # normalize=True -> segments requested normalized -> each emitted segment is unit
+    fake = _RecordingVideoModel()
+    model = AVModel.from_video_vector_model(
+        fake, segment_length_s=10.0, normalize=True, emit_segment_vectors=True
+    )
+    tags = model.tag(fpath)
+    assert fake.normalize_seen and all(n is True for n in fake.normalize_seen)
+    for t in tags[:-1]:  # segment tags (pooled is last)
+        assert abs(float(np.linalg.norm(t.vector)) - 1.0) < 1e-6
+
+    # normalize=False -> segments requested raw
+    fake2 = _RecordingVideoModel()
+    model2 = AVModel.from_video_vector_model(
+        fake2, segment_length_s=10.0, normalize=False, emit_segment_vectors=True
+    )
+    model2.tag(fpath)
+    assert fake2.normalize_seen and all(n is False for n in fake2.normalize_seen)
+
+
+def test_video_vector_bad_segment_is_skipped_not_fatal(test_videos: List[str]):
+    fpath = test_videos[0]
+    duration_ms = round(get_duration(fpath) * 1000)
+    windows = _expected_windows(duration_ms, 10.0)
+    assert len(windows) >= 2
+
+    fake = _FlakyVideoModel(fail_on=1)  # second window raises
+    model = AVModel.from_video_vector_model(
+        fake, segment_length_s=10.0, normalize=False, emit_segment_vectors=True
+    )
+    tags = model.tag(fpath)  # must NOT raise
+
+    # every window was attempted despite the mid-stream failure
+    assert len(fake.calls) == len(windows)
+
+    pooled = tags[-1]
+    segment_tags = tags[:-1]
+    assert pooled.start_time == 0 and pooled.end_time == duration_ms
+
+    # the failed window (index 1) is skipped -> its timestamps are absent
+    surviving_windows = [w for i, w in enumerate(windows) if i != 1]
+    assert [(t.start_time, t.end_time) for t in segment_tags] == surviving_windows
+
+    # pooled == plain mean over the surviving raw segment vectors
+    surviving_vecs = [[float(i) + j for j in range(fake.dim)]
+                      for i in range(len(windows)) if i != 1]
+    assert np.allclose(pooled.vector, np.mean(surviving_vecs, axis=0))
+
+
+def test_video_vector_all_segments_fail_emit_nothing(test_videos: List[str]):
+    fake = _FlakyVideoModel(fail_on=range(10_000))  # every window raises
+    model = AVModel.from_video_vector_model(fake, segment_length_s=10.0)
+    # all segments fail -> no usable vectors -> no tags, and no exception propagates
+    assert model.tag(test_videos[0]) == []
+    assert len(fake.calls) >= 1

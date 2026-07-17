@@ -125,7 +125,7 @@ class TagProcessorAdapterLogic:
                     if len(self.all_rangeinfos) > 0:
                         source_media_info = self.all_rangeinfos[0]
                     else:
-                        source_media_info = InputRangeInfo(0, 0, "")
+                        source_media_info = InputRangeInfo("", 0, 0)
                         logger.error("Weird corner case -- model run with no input ranges but on_completion emitted tags anyway.")
 
                 yield replace(message, source_media=source_media_info.input)

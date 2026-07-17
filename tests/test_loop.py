@@ -110,8 +110,9 @@ def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], tes
         proc.join(timeout=5)
 
 def test_loop_vector_pooling(vector_av_model, test_videos: List[str], test_folder: str):
-    # end-to-end: a pooling AVModel plugs into the daemon via TagMessageProducer.from_model
-    # with zero new wiring, and its single video-level vector serializes correctly.
+    # end-to-end: a temporal-aware video-vector pooling AVModel (from_video_vector_model)
+    # plugs into the daemon via TagMessageProducer.from_model with zero new wiring, and its
+    # single whole-video vector serializes correctly.
     output_path = os.path.join(test_folder, "out.jsonl")
     producer = TagMessageProducer.from_model(vector_av_model)
 
