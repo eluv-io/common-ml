@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 # these used to be in this file and I don't want to break stuff
-from common_ml.tagging.messages import Tag, VectorTag, BaseTag, FrameInfo
+from common_ml.tagging.messages import Tag, Vector, BaseTag, FrameInfo
 
 @dataclass(frozen=True, kw_only=True)
 class BaseFrameTag:
@@ -24,8 +24,8 @@ class FrameTag(BaseFrameTag):
         return Tag(tag=self.tag, additional_info=self.additional_info, **video_fields)
 
 @dataclass(frozen=True, kw_only=True)
-class FrameVectorTag(BaseFrameTag):
+class FrameVector(BaseFrameTag):
     vector: List[float] = field(default_factory=list)
 
-    def to_tag(self, **video_fields) -> VectorTag:
-        return VectorTag(vector=self.vector, additional_info=self.additional_info, **video_fields)
+    def to_tag(self, **video_fields) -> Vector:
+        return Vector(vector=self.vector, additional_info=self.additional_info, **video_fields)

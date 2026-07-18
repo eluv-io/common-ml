@@ -24,8 +24,8 @@ class Tag(BaseTag):
     tag: str
 
 @dataclass(frozen=True, kw_only=True)
-class VectorTag(BaseTag):
-    message_type: ClassVar[str] = "vector_tag"
+class Vector(BaseTag):
+    message_type: ClassVar[str] = "vector"
     vector: List[float] = field(default_factory=list)
 
 @dataclass(frozen=True)

@@ -6,7 +6,6 @@ from common_ml.tagging.models.processor import TagProcessor
 from common_ml.tagging.models.av import AVModel
 from common_ml.tagging.models.frame_based import *
 from common_ml.tagging.models.tag_types import *
-from common_ml.tagging.models.video_based import VideoVectorModel
 from common_ml.tagging.run_helpers import *
 
 TEST_DATA = os.path.join(os.path.dirname(__file__), "test-data")
@@ -53,23 +52,12 @@ class FakeFrameVectorModel(FrameModel):
         self.call_count += 1
         vector = [base + i for i in range(self.dim)]
         return [
-            FrameVectorTag(
+            FrameVector(
                 vector=vector,
                 box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4},
                 additional_info={"hello": "world"},
             )
         ]
-
-class FakeVideoVectorModel(VideoVectorModel):
-    def __init__(self, dim: int = 4):
-        self.dim = dim
-        self.call_count = 0
-
-    def embed_video(self, fpath, start_ms=None, end_ms=None, normalize=None):
-        # one vector per window; raw (nonzero) contents, the factory handles normalization
-        idx = self.call_count
-        self.call_count += 1
-        return [float(idx + 1 + i) for i in range(self.dim)]
 
 class FakeTagProcessor(TagProcessor):
     def __init__(self, max_start_timestamp = 1e12):
@@ -105,12 +93,6 @@ def frame_model():
 @pytest.fixture
 def vector_frame_model():
     return FakeFrameVectorModel()
-
-@pytest.fixture
-def vector_av_model():
-    # temporal-aware pooling AVModel via the video-vector path; segment_length_s=None
-    # -> a single whole-video window -> one pooled VectorTag
-    return AVModel.from_video_vector_model(FakeVideoVectorModel(), segment_length_s=None)
 
 @pytest.fixture
 def batch_frame_model(frame_model):

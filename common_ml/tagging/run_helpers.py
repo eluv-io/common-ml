@@ -109,7 +109,7 @@ class AbortTaggingException(Exception):
 
 def write_message(msg: Message, fout):
     # dispatch on the per-type message_type discriminator; adding a new tag type
-    # (e.g. VectorTag) requires no change here.
+    # (e.g. Vector) requires no change here.
     if not isinstance(msg, (BaseTag, Progress, ProgressRatio, Error)):
         raise ValueError(f"Unexpected message type: {msg}")
     fout.write(json.dumps({"type": msg.message_type, "data": asdict(msg)}) + "\n")

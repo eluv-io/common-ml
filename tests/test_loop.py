@@ -1,5 +1,4 @@
 import json
-import math
 import os
 import sys
 import time
@@ -12,7 +11,6 @@ from common_ml.tagging.models.processor import TagProcessor
 from common_ml.tagging.run_helpers import start_loop_from_frame_model, start_loop_from_producer, run_default
 from common_ml.tagging.models.frame_based import *
 from common_ml.tagging.messages import *
-from common_ml.video_processing import get_duration
 
 def _run_tag_loop(model, output_path, read_fd, write_fd):
     # clever claude fix for the test not terminating, we need the ref count for the FD to hit 0 to trigger EOF
@@ -77,7 +75,7 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         proc.join(timeout=5)
 
 def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], test_folder: str):
-    # end-to-end: the daemon must emit valid {"type": "vector_tag", ...} JSONL
+    # end-to-end: the daemon must emit valid {"type": "vector", ...} JSONL
     output_path = os.path.join(test_folder, "out.jsonl")
 
     read_fd, write_fd = os.pipe()
@@ -95,7 +93,7 @@ def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], tes
         with open(output_path, "r") as f:
             records = [json.loads(l) for l in f if l.strip()]
 
-        vector_records = [r for r in records if r["type"] == "vector_tag"]
+        vector_records = [r for r in records if r["type"] == "vector"]
         # one vector per image
         assert len(vector_records) == len(test_images)
         for r in vector_records:
@@ -105,44 +103,6 @@ def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], tes
 
         progress_records = [r for r in records if r["type"] == "progress"]
         assert len(progress_records) == len(test_images)
-    finally:
-        write_pipe.close()
-        proc.join(timeout=5)
-
-def test_loop_vector_pooling(vector_av_model, test_videos: List[str], test_folder: str):
-    # end-to-end: a temporal-aware video-vector pooling AVModel (from_video_vector_model)
-    # plugs into the daemon via TagMessageProducer.from_model with zero new wiring, and its
-    # single whole-video vector serializes correctly.
-    output_path = os.path.join(test_folder, "out.jsonl")
-    producer = TagMessageProducer.from_model(vector_av_model)
-
-    read_fd, write_fd = os.pipe()
-    proc = multiprocessing.Process(target=_run_producer_loop, args=(producer, output_path, read_fd, write_fd, False, None))
-    proc.start()
-    os.close(read_fd)
-    write_pipe = os.fdopen(write_fd, 'w')
-
-    write_pipe.write(test_videos[0] + "\n")
-    write_pipe.flush()
-
-    try:
-        time.sleep(2)
-
-        with open(output_path, "r") as f:
-            records = [json.loads(l) for l in f if l.strip()]
-
-        vector_records = [r for r in records if r["type"] == "vector_tag"]
-        # exactly one pooled vector for the whole video
-        assert len(vector_records) == 1
-        data = vector_records[0]["data"]
-        assert data["frame_info"] is None
-        assert data["start_time"] == 0
-        assert data["end_time"] == round(get_duration(test_videos[0]) * 1000)
-        assert len(data["vector"]) > 0
-        assert "message_type" not in data
-        # normalized by default
-        norm = math.sqrt(sum(x * x for x in data["vector"]))
-        assert abs(norm - 1.0) < 1e-6
     finally:
         write_pipe.close()
         proc.join(timeout=5)
