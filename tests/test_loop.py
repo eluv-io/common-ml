@@ -93,7 +93,7 @@ def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], tes
         with open(output_path, "r") as f:
             records = [json.loads(l) for l in f if l.strip()]
 
-        vector_records = [r for r in records if r["type"] == "tag" and r["data"].get("vector") is not None]
+        vector_records = [r for r in records if r["type"] == "tag" and r["data"]["vector"] is not None]
         # one vector per image
         assert len(vector_records) == len(test_images)
         for r in vector_records:
