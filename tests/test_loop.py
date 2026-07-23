@@ -75,7 +75,7 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         proc.join(timeout=5)
 
 def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], test_folder: str):
-    # end-to-end: the daemon must emit valid {"type": "vector", ...} JSONL
+    # end-to-end: the daemon must emit valid {"type": "tag", ...} JSONL
     output_path = os.path.join(test_folder, "out.jsonl")
 
     read_fd, write_fd = os.pipe()
@@ -93,7 +93,7 @@ def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], tes
         with open(output_path, "r") as f:
             records = [json.loads(l) for l in f if l.strip()]
 
-        vector_records = [r for r in records if r["type"] == "vector"]
+        vector_records = [r for r in records if r["type"] == "tag" and r["data"].get("vector") is not None]
         # one vector per image
         assert len(vector_records) == len(test_images)
         for r in vector_records:

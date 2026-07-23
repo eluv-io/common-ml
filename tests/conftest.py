@@ -52,7 +52,8 @@ class FakeFrameVectorModel(FrameModel):
         self.call_count += 1
         vector = [base + i for i in range(self.dim)]
         return [
-            FrameVector(
+            FrameTag(
+                tag="",
                 vector=vector,
                 box={"x1": 0.1, "y1": 0.2, "x2": 0.3, "y2": 0.4},
                 additional_info={"hello": "world"},

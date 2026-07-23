@@ -1,5 +1,5 @@
 from typing import Optional, Dict, List, ClassVar
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 class Message:
     message_type: ClassVar[str]
@@ -10,23 +10,16 @@ class FrameInfo:
     box: Dict[str, float]
 
 @dataclass(frozen=True, kw_only=True)
-class BaseTag(Message):
+class Tag(Message):
+    message_type: ClassVar[str] = "tag"
     start_time: int
     end_time: int
+    tag: str
+    vector: Optional[List[float]] = None
     source_media: str
     track: str = ""
     additional_info: Optional[Dict] = None
     frame_info: Optional[FrameInfo] = None
-
-@dataclass(frozen=True, kw_only=True)
-class Tag(BaseTag):
-    message_type: ClassVar[str] = "tag"
-    tag: str
-
-@dataclass(frozen=True, kw_only=True)
-class Vector(BaseTag):
-    message_type: ClassVar[str] = "vector"
-    vector: List[float] = field(default_factory=list)
 
 @dataclass(frozen=True)
 class Progress(Message):

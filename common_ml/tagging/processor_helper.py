@@ -4,7 +4,7 @@ import os
 from typing import Iterator, List, Optional
 from loguru import logger
 
-from common_ml.tagging.messages import Message, Progress, Tag, BaseTag
+from common_ml.tagging.messages import Message, Progress, Tag
 from common_ml.tagging.models.processor import TagProcessor
 
 @dataclass
@@ -74,7 +74,7 @@ class TagProcessorAdapterLogic:
             logger.info(f"Processing range {start} to {end}")
             for message in self.tag_processor.process(self.iq, self.auth, start, end):
                 source_media_info = None
-                if isinstance(message, BaseTag):
+                if isinstance(message, Tag):
                     source_media_info = find_input_range(rangeinfos, message.start_time)
                     if source_media_info is None:
                         source_media_info = find_input_range(self.all_rangeinfos, message.start_time)
@@ -118,7 +118,7 @@ class TagProcessorAdapterLogic:
     def on_completion(self) -> Iterator[Message]:
         for message in self.tag_processor.on_completion():
             source_media_info = None
-            if isinstance(message, BaseTag):
+            if isinstance(message, Tag):
                 source_media_info = find_input_range(self.all_rangeinfos, message.start_time)
                 if source_media_info is None:
                     logger.warning(f"Tag produced with start_time {message.start_time} that does not fall within any input range, crediting to first json")

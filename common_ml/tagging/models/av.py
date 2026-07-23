@@ -6,14 +6,14 @@ from abc import ABC, abstractmethod
 import numpy as np
 from loguru import logger
 
-from common_ml.tagging.messages import BaseTag
-from common_ml.tagging.models.tag_types import BaseFrameTag, FrameInfo, Tag
+from common_ml.tagging.messages import Tag
+from common_ml.tagging.models.tag_types import FrameTag, FrameInfo, Tag
 from common_ml.tagging.models.frame_based import BatchFrameModel
 from common_ml.video_processing import get_frames, get_fps
 
 class AVModel(ABC):
     @abstractmethod
-    def tag(self, fpath: str) -> List[BaseTag]:
+    def tag(self, fpath: str) -> List[Tag]:
         pass
 
     @staticmethod
@@ -21,7 +21,7 @@ class AVModel(ABC):
         return round(seconds * 1000)
 
     @staticmethod
-    def _frame_tag_to_video_tag(frame_tag: BaseFrameTag, frame_idx: int, source_media: str, time_s: float) -> BaseTag:
+    def _frame_tag_to_video_tag(frame_tag: FrameTag, frame_idx: int, source_media: str, time_s: float) -> Tag:
         ts = AVModel._to_milliseconds(time_s)
         return frame_tag.to_tag(
             start_time=ts,
@@ -42,10 +42,10 @@ class AVModel(ABC):
         @dataclass
         class TagWithPos:
             pos: int
-            tag: BaseTag
+            tag: Tag
 
         class NewModel(AVModel):
-            def tag(self, fpath: str) -> List[BaseTag]:
+            def tag(self, fpath: str) -> List[Tag]:
                 key_frames, frame_indices, _ = get_frames(video_file=fpath, fps=fps)
                 video_fps = get_fps(fpath)
                 tagged_w_pos: List[TagWithPos] = []
@@ -59,7 +59,7 @@ class AVModel(ABC):
                 frame_level_tags = [t.tag for t in tagged_w_pos]
                 return frame_level_tags + combined_tags
 
-            def _combine_adjacent(self, tags: List[TagWithPos], allow_single_frame: bool, fps: float) -> List[BaseTag]:
+            def _combine_adjacent(self, tags: List[TagWithPos], allow_single_frame: bool, fps: float) -> List[Tag]:
                 if len(tags) == 0:
                     return []
 
@@ -67,16 +67,16 @@ class AVModel(ABC):
 
                 tag_to_items: Dict[str, List[TagWithPos]] = {}
                 for twp in tags:
-                    if not isinstance(twp.tag, Tag):
-                        # run-length merging applies to string tags (Tag) only; other
-                        # payloads (e.g. vectors) pass through as per-frame tags
+                    if twp.tag.vector is not None:
+                        # run-length merging applies to string tags (Tag) only; 
+                        # tags with other payloads (e.g. vectors) pass through as per-frame tags
                         continue
                     key = twp.tag.tag
                     if key not in tag_to_items:
                         tag_to_items[key] = []
                     tag_to_items[key].append(twp)
 
-                def combined(left: TagWithPos, right: TagWithPos) -> BaseTag:
+                def combined(left: TagWithPos, right: TagWithPos) -> Tag:
                     # rebuild from a representative member so the payload (tag/vector/...)
                     # is carried over generically; drop frame-level-only fields
                     return replace(
