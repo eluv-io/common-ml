@@ -33,6 +33,9 @@ class TagMessageProducer(ABC):
 
                     yield Progress(source_media=fname)
 
+            def on_completion(self) -> Iterator[Message]:
+                return file_tagger.on_completion()
+
         return FileTaggerToTagMessageProducerAdapter()
 
     @staticmethod

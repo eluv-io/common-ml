@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import Iterator, List, Union
 import cv2
 import numpy as np
 
@@ -13,12 +13,20 @@ class FileTagger(ABC):
     def tag(self, file: str) -> List[Tag]:
         pass
 
+    def on_completion(self) -> Iterator[Tag]:
+        """Optional finalization hook, run once after all files are tagged.
+        Defaults to yield nothing."""
+        yield from ()
+
     @staticmethod
     def from_video_model(video_model: AVModel) -> 'FileTagger':
         class NewFileTagger(FileTagger):
             def tag(self, file: str) -> List[Tag]:
                 return video_model.tag(file)
-    
+
+            def on_completion(self) -> Iterator[Tag]:
+                return video_model.on_completion()
+
         return NewFileTagger()
 
     @staticmethod

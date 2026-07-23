@@ -1,6 +1,6 @@
 from dataclasses import dataclass, replace
 from functools import lru_cache
-from typing import Dict, List, Optional
+from typing import Dict, Iterator, List, Optional
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -15,6 +15,16 @@ class AVModel(ABC):
     @abstractmethod
     def tag(self, fpath: str) -> List[Tag]:
         pass
+
+    def on_completion(self) -> Iterator[Tag]:
+        """
+        Optional finalization hook, called once after all input files have been processed.
+        Override to emit any tags that can only be produced once the full input stream is
+        known, such as a shot that may span across contiguous input files and
+        cannot be closed at the end of one tag() call.
+        Defaults to yield nothing.
+        """
+        yield from ()
 
     @staticmethod
     def _to_milliseconds(seconds: float) -> int:
