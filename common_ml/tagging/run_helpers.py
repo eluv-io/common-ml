@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 import argparse
 import traceback
 from typing import Union, Any, Dict

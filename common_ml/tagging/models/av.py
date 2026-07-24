@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from typing import Dict, Iterator, List, Optional

@@ -1,6 +1,6 @@
-from collections.abc import Iterator
+from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Iterator, Optional
 
 from common_ml.tagging.messages import Message
 from common_ml.tagging.models.tag_types import FrameInfo, FrameTag, Tag

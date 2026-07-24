@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional, Dict, List, ClassVar
 from dataclasses import dataclass
 
@@ -9,14 +10,14 @@ class FrameInfo:
     frame_idx: int
     box: Dict[str, float]
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class Tag(Message):
     message_type: ClassVar[str] = "tag"
     start_time: int
     end_time: int
     tag: str
-    vector: Optional[List[float]] = None
     source_media: str
+    vector: Optional[List[float]] = None
     track: str = ""
     additional_info: Optional[Dict] = None
     frame_info: Optional[FrameInfo] = None

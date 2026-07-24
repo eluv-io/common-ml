@@ -1,14 +1,14 @@
-
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 # these used to be in this file and I don't want to break stuff
 from common_ml.tagging.messages import Tag, FrameInfo
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class FrameTag:
     tag: str
-    vector: Optional[List[float]] = None
     box: Dict[str, float]
+    vector: Optional[List[float]] = None
     additional_info: Optional[Dict] = None
 
     def to_tag(self, **video_fields) -> Tag:
