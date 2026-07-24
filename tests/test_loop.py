@@ -75,7 +75,7 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         proc.join(timeout=5)
 
 def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], test_folder: str):
-    # end-to-end: the daemon must emit valid {"type": "tag", ...} JSONL
+    # end-to-end: the daemon must emit valid {"type": "tag", ..., "vector": [...], ...} JSONL
     output_path = os.path.join(test_folder, "out.jsonl")
 
     read_fd, write_fd = os.pipe()

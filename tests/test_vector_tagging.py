@@ -30,7 +30,7 @@ class _MixedFrameModel(FrameModel):
 
 def test_vector_type_basics():
     v = Tag(tag="", vector=[0.1, 0.2, 0.3], start_time=0, end_time=1, source_media="m")
-    # a vector is a Tag with a vector field; _combine_adjacent keys off
+    # vector tag v is a Tag with a vector field; _combine_adjacent keys off
     # this (only Tag instances without vector (vector=None) run-length merged)
     assert isinstance(v, Tag)
     assert v.message_type == "tag" and v.vector is not None

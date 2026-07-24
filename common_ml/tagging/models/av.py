@@ -18,10 +18,7 @@ class AVModel(ABC):
 
     def on_completion(self) -> Iterator[Tag]:
         """
-        Optional finalization hook, called once after all input files have been processed.
-        Override to emit any tags that can only be produced once the full input stream is
-        known, such as a shot that may span across contiguous input files and
-        cannot be closed at the end of one tag() call.
+        Optional finalization hook to emit any final tags after all input files have been processed.
         Defaults to yield nothing.
         """
         yield from ()
