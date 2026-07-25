@@ -15,8 +15,8 @@ class Tag(Message):
     message_type: ClassVar[str] = "tag"
     start_time: int
     end_time: int
-    tag: str
     source_media: str
+    tag: str = ""
     vector: Optional[List[float]] = None
     track: str = ""
     additional_info: Optional[Dict] = None
