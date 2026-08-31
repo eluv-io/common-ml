@@ -52,6 +52,9 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         tag_lines = [l for l in lines if "tag" in l]
         num_tag_lines = len(tag_lines)
         assert len(tag_lines) > 100
+        # a non-vector model must not emit a vector key at all
+        tag_records = [r for r in map(json.loads, lines) if r["type"] == "tag"]
+        assert tag_records and all("vector" not in r["data"] for r in tag_records)
         status_lines = [l for l in lines if "progress" in l]
         assert len(status_lines) == 2
         assert test_videos[0] in status_lines[0]
@@ -93,7 +96,7 @@ def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], tes
         with open(output_path, "r") as f:
             records = [json.loads(l) for l in f if l.strip()]
 
-        vector_records = [r for r in records if r["type"] == "tag" and r["data"]["vector"] is not None]
+        vector_records = [r for r in records if r["type"] == "tag" and "vector" in r["data"]]
         # one vector per image
         assert len(vector_records) == len(test_images)
         for r in vector_records:

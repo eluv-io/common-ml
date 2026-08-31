@@ -104,8 +104,15 @@ def test_string_and_vector_serialize_differently():
     write_message(t, tbuf)
     write_message(v, vbuf)
 
-    assert json.loads(tbuf.getvalue())["type"] == "tag"
-    assert json.loads(vbuf.getvalue())["type"] == "tag"
+    trecord, vrecord = json.loads(tbuf.getvalue()), json.loads(vbuf.getvalue())
+    assert trecord["type"] == "tag"
+    assert vrecord["type"] == "tag"
+
+    # an unset vector is omitted from the output entirely -- no "vector": null
+    assert "vector" not in trecord["data"]
+    assert trecord["data"]["tag"] == "dog"
+    # a set vector is present as-is
+    assert vrecord["data"]["vector"] == [0.5]
 
 
 # merge-skip pinned to AVModel.from_frame_model (no FileTagger layer)

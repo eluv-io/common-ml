@@ -111,7 +111,12 @@ def write_message(msg: Message, fout):
     # dispatch on the per-type message_type discriminator
     if not isinstance(msg, (Tag, Progress, ProgressRatio, Error)):
         raise ValueError(f"Unexpected message type: {msg}")
-    fout.write(json.dumps({"type": msg.message_type, "data": asdict(msg)}) + "\n")
+    data = asdict(msg)
+    # non-vector models leave `vector` unset: omit the key entirely rather than
+    # emitting "vector": null for every string tag
+    if data.get("vector", False) is None:
+        del data["vector"]
+    fout.write(json.dumps({"type": msg.message_type, "data": data}) + "\n")
     fout.flush()
 
 def start_loop_from_av_model(
