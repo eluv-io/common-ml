@@ -52,6 +52,9 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         tag_lines = [l for l in lines if "tag" in l]
         num_tag_lines = len(tag_lines)
         assert len(tag_lines) > 100
+        # a non-vector model must not emit a vector key at all
+        tag_records = [r for r in map(json.loads, lines) if r["type"] == "tag"]
+        assert tag_records and all("vector" not in r["data"] for r in tag_records)
         status_lines = [l for l in lines if "progress" in l]
         assert len(status_lines) == 2
         assert test_videos[0] in status_lines[0]
@@ -74,7 +77,40 @@ def test_loop(frame_model: FrameModel, test_videos: List[str], test_images: List
         write_pipe.close()
         proc.join(timeout=5)
 
-def test_loop_for_processor(tag_processor: TagProcessor, test_timestamp_files: List[str], test_folder: str):    
+def test_loop_vector(vector_frame_model: FrameModel, test_images: List[str], test_folder: str):
+    # end-to-end: the daemon must emit valid {"type": "tag", ..., "vector": [...], ...} JSONL
+    output_path = os.path.join(test_folder, "out.jsonl")
+
+    read_fd, write_fd = os.pipe()
+    proc = multiprocessing.Process(target=_run_tag_loop, args=(vector_frame_model, output_path, read_fd, write_fd))
+    proc.start()
+    os.close(read_fd)
+    write_pipe = os.fdopen(write_fd, 'w')
+
+    write_pipe.write("\n".join(test_images) + "\n")
+    write_pipe.flush()
+
+    try:
+        time.sleep(2)
+
+        with open(output_path, "r") as f:
+            records = [json.loads(l) for l in f if l.strip()]
+
+        vector_records = [r for r in records if r["type"] == "tag" and "vector" in r["data"]]
+        # one vector per image
+        assert len(vector_records) == len(test_images)
+        for r in vector_records:
+            assert isinstance(r["data"]["vector"], list)
+            assert len(r["data"]["vector"]) == vector_frame_model.dim
+            assert "message_type" not in r["data"]
+
+        progress_records = [r for r in records if r["type"] == "progress"]
+        assert len(progress_records) == len(test_images)
+    finally:
+        write_pipe.close()
+        proc.join(timeout=5)
+
+def test_loop_for_processor(tag_processor: TagProcessor, test_timestamp_files: List[str], test_folder: str):
 
     output_path = os.path.join(test_folder, "out.jsonl")
 

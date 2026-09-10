@@ -1,4 +1,4 @@
-    
+from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from typing import Union, Iterator
@@ -32,6 +32,9 @@ class TagMessageProducer(ABC):
                         yield tag
 
                     yield Progress(source_media=fname)
+
+            def on_completion(self) -> Iterator[Message]:
+                return file_tagger.on_completion()
 
         return FileTaggerToTagMessageProducerAdapter()
 

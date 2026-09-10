@@ -1,11 +1,11 @@
 
-
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List
 import numpy as np
 
 from common_ml.tagging.models.tag_types import FrameTag
-    
+
 class FrameModel(ABC):
     @abstractmethod
     def tag_frame(self, img: np.ndarray) -> List[FrameTag]:

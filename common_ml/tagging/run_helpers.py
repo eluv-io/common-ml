@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 import argparse
 import traceback
 from typing import Union, Any, Dict
@@ -108,16 +108,15 @@ class AbortTaggingException(Exception):
     pass
 
 def write_message(msg: Message, fout):
-    if isinstance(msg, Tag):
-        fout.write(json.dumps({"type": "tag", "data": asdict(msg)}) + "\n")
-    elif isinstance(msg, Progress):
-        fout.write(json.dumps({"type": "progress", "data": asdict(msg)}) + "\n")
-    elif isinstance(msg, Error):
-        fout.write(json.dumps({"type": "error", "data": asdict(msg)}) + "\n")
-    elif isinstance(msg, ProgressRatio):
-        fout.write(json.dumps({"type": "progress_ratio", "data": asdict(msg)}) + "\n")
-    else:
-        raise ValueError(f"Unnexpected message type: {msg}")
+    # dispatch on the per-type message_type discriminator
+    if not isinstance(msg, (Tag, Progress, ProgressRatio, Error)):
+        raise ValueError(f"Unexpected message type: {msg}")
+    data = asdict(msg)
+    # non-vector models leave `vector` unset: omit the key entirely rather than
+    # emitting "vector": null for every string tag
+    if data.get("vector", False) is None:
+        del data["vector"]
+    fout.write(json.dumps({"type": msg.message_type, "data": data}) + "\n")
     fout.flush()
 
 def start_loop_from_av_model(

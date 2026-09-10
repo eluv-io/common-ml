@@ -1,5 +1,6 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import Iterator, List, Union
 import cv2
 import numpy as np
 
@@ -13,12 +14,20 @@ class FileTagger(ABC):
     def tag(self, file: str) -> List[Tag]:
         pass
 
+    def on_completion(self) -> Iterator[Tag]:
+        """Optional finalization hook, run once after all files are tagged.
+        Defaults to yield nothing."""
+        yield from ()
+
     @staticmethod
     def from_video_model(video_model: AVModel) -> 'FileTagger':
         class NewFileTagger(FileTagger):
             def tag(self, file: str) -> List[Tag]:
                 return video_model.tag(file)
-    
+
+            def on_completion(self) -> Iterator[Tag]:
+                return video_model.on_completion()
+
         return NewFileTagger()
 
     @staticmethod
@@ -45,16 +54,14 @@ class FileTagger(ABC):
                     img = img[:, :, ::-1]
                     frametags = batched_frame_model.tag_frames(np.array([img]))[0]
 
-                    tags = []
+                    tags: List[Tag] = []
                     for ftag in frametags:
-                        out_tag = Tag(
+                        out_tag = ftag.to_tag(
                             start_time=0,
                             end_time=0,
-                            tag=ftag.tag,
                             source_media=file,
                             track="",
-                            additional_info=ftag.additional_info,
-                            frame_info=FrameInfo(frame_idx=0, box=ftag.box)
+                            frame_info=FrameInfo(frame_idx=0, box=ftag.box),
                         )
                         tags.append(out_tag)
 

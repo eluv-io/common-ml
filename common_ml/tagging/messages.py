@@ -1,7 +1,9 @@
-from typing import Optional, Dict
+from __future__ import annotations
+from typing import Optional, Dict, List, ClassVar
 from dataclasses import dataclass
 
-class Message: ...
+class Message:
+    message_type: ClassVar[str]
 
 @dataclass(frozen=True)
 class FrameInfo:
@@ -10,23 +12,28 @@ class FrameInfo:
 
 @dataclass(frozen=True)
 class Tag(Message):
+    message_type: ClassVar[str] = "tag"
     start_time: int
     end_time: int
-    tag: str
     source_media: str
+    tag: str = ""
+    vector: Optional[List[float]] = None
     track: str = ""
     additional_info: Optional[Dict] = None
     frame_info: Optional[FrameInfo] = None
 
 @dataclass(frozen=True)
 class Progress(Message):
+    message_type: ClassVar[str] = "progress"
     source_media: str
 
 @dataclass(frozen=True)
 class ProgressRatio(Message):
+    message_type: ClassVar[str] = "progress_ratio"
     progress: float
 
 @dataclass(frozen=True)
 class Error(Message):
+    message_type: ClassVar[str] = "error"
     message: str
     source_media: Optional[str] = None
